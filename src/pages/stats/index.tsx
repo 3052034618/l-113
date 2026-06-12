@@ -5,12 +5,12 @@ import classnames from 'classnames';
 import { useInspectionStore } from '@/store/inspection';
 import StatCard from '@/components/StatCard';
 import ProgressBar from '@/components/ProgressBar';
-import { formatDate, getDateList, isFaultTimeout, formatTime, getShiftList, isSameShift } from '@/utils';
+import { formatDate, getDateList, isFaultTimeout, formatTime, getShiftList, isSameShift, getCurrentShift } from '@/utils';
 import type { ShiftType } from '@/types/inspection';
 import styles from './index.module.scss';
 
 const StatsPage: React.FC = () => {
-  const { user, getStatsByDateAndShift, faultReports, routes, scanRecords, getCurrentShift } = useInspectionStore();
+  const { user, getStatsByDateAndShift, faultReports, routes, scanRecords } = useInspectionStore();
   const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
   const [selectedShift, setSelectedShift] = useState<ShiftType>(getCurrentShift());
 
@@ -33,10 +33,10 @@ const StatsPage: React.FC = () => {
 
   const timeoutFaults = useMemo(() => {
     return faultReports.filter(f => {
-      if (f.rectifyStatus === 'completed') return false;
-      const reportDate = f.createdAt.slice(0, 10);
+      if (f.rectifyStatus === 'completed' || f.rectifyStatus === 'closed') return false;
+      const reportDate = f.reportTime.slice(0, 10);
       return reportDate <= selectedDate && isFaultTimeout(f) && f.shift === selectedShift;
-    }).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    }).sort((a, b) => new Date(a.reportTime).getTime() - new Date(b.reportTime).getTime());
   }, [faultReports, selectedDate, selectedShift]);
 
   const historyStats = useMemo(() => {
@@ -197,7 +197,7 @@ const StatsPage: React.FC = () => {
             <View key={fault.id} className={styles.timeoutCard}>
               <Text className={styles.timeoutTitle}>{fault.deviceName}</Text>
               <Text className={styles.timeoutMeta}>
-                {fault.pointName} · {fault.shift} · 上报于 {formatTime(fault.createdAt)}
+                {fault.pointName} · {fault.shift} · 上报于 {formatTime(fault.reportTime)}
               </Text>
               <Text className={styles.timeoutDesc}>{fault.description}</Text>
             </View>

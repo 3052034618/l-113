@@ -24,7 +24,8 @@ const FaultPage: React.FC = () => {
     completeFault,
     recheckFault,
     currentUser,
-    linkScanRecordToFault
+    linkScanRecordToFault,
+    getFaultById
   } = useInspectionStore();
   const router = useRouter();
   const [filter, setFilter] = useState<FilterType>('all');
@@ -48,6 +49,7 @@ const FaultPage: React.FC = () => {
   const [assigneeName, setAssigneeName] = useState('');
   const [recheckRequired, setRecheckRequired] = useState(true);
   const [scanRecordId, setScanRecordId] = useState<string>('');
+  const [prefillProcessed, setPrefillProcessed] = useState(false);
 
   const todayStats = getTodayStats();
 
@@ -59,7 +61,8 @@ const FaultPage: React.FC = () => {
     const prefillPhotos = router.params.photos as string;
     const prefillScanRecordId = router.params.scanRecordId as string;
 
-    if (prefillDeviceId || prefillPointId || prefillDescription) {
+    if ((prefillDeviceId || prefillPointId || prefillDescription) && !prefillProcessed) {
+      setPrefillProcessed(true);
       if (prefillDeviceId) {
         const device = getDeviceById(prefillDeviceId);
         if (device) {
@@ -101,13 +104,14 @@ const FaultPage: React.FC = () => {
     }, 1000);
   });
 
-  const pendingCount = useMemo(() => faultReports.filter(f => f.rectifyStatus === 'pending').length, [faultReports]);
+  const pendingCount = useMemo(() => faultReports.filter(f => f.rectifyStatus === 'pending' || f.rectifyStatus === 'assigned').length, [faultReports]);
   const processingCount = useMemo(() => faultReports.filter(f => f.rectifyStatus === 'processing').length, [faultReports]);
   const recheckCount = useMemo(() => faultReports.filter(f => f.rectifyStatus === 'recheck').length, [faultReports]);
   const timeoutCount = useMemo(() => faultReports.filter(f => isFaultTimeout(f)).length, [faultReports]);
 
   const filteredFaults = useMemo(() => {
     if (filter === 'all') return faultReports;
+    if (filter === 'pending') return faultReports.filter(f => f.rectifyStatus === 'pending' || f.rectifyStatus === 'assigned');
     return faultReports.filter(f => f.rectifyStatus === filter);
   }, [faultReports, filter]);
 
@@ -119,7 +123,9 @@ const FaultPage: React.FC = () => {
       completed: []
     };
     faultReports.forEach(f => {
-      if (groups[f.rectifyStatus]) {
+      if (f.rectifyStatus === 'pending' || f.rectifyStatus === 'assigned') {
+        groups.pending.push(f);
+      } else if (groups[f.rectifyStatus]) {
         groups[f.rectifyStatus].push(f);
       }
     });
@@ -157,6 +163,8 @@ const FaultPage: React.FC = () => {
     setAssigneeId('');
     setAssigneeName('');
     setRecheckRequired(true);
+    setScanRecordId('');
+    setPrefillProcessed(false);
   };
 
   const handleSubmit = () => {
@@ -169,7 +177,7 @@ const FaultPage: React.FC = () => {
       return;
     }
 
-    const faultId = addFaultReport({
+    const newFault = addFaultReport({
       deviceId: deviceId || `DEV-${Date.now()}`,
       assetCode: assetCode || '未记录',
       deviceName: deviceName.trim(),
@@ -184,19 +192,23 @@ const FaultPage: React.FC = () => {
       scanRecordId: scanRecordId || undefined
     });
 
-    if (scanRecordId && faultId) {
-      linkScanRecordToFault(scanRecordId, faultId);
+    if (newFault && scanRecordId) {
+      showToast(`故障单 #${newFault.id.slice(-6)} 已生成`, 'success');
+    } else {
+      showToast('故障上报成功', 'success');
     }
 
     setShowModal(false);
     resetForm();
-    showToast('故障上报成功', 'success');
   };
 
   const handleAccept = () => {
     if (!showDetail) return;
     acceptFault(showDetail.id);
-    setShowDetail(null);
+    const updatedFault = getFaultById(showDetail.id);
+    if (updatedFault) {
+      setShowDetail(updatedFault);
+    }
     showToast('已接单', 'success');
   };
 
@@ -208,9 +220,12 @@ const FaultPage: React.FC = () => {
   const confirmReject = () => {
     if (!showDetail) return;
     rejectFault(showDetail.id, rejectRemark || '无');
+    const updatedFault = getFaultById(showDetail.id);
+    if (updatedFault) {
+      setShowDetail(updatedFault);
+    }
     setShowRejectModal(false);
     setRejectRemark('');
-    setShowDetail(null);
     showToast('已退回', 'success');
   };
 
@@ -220,9 +235,12 @@ const FaultPage: React.FC = () => {
       title: '确认整改完成？',
       content: showDetail.recheckRequired ? '提交后将进入待复检状态' : '无需复检，提交后将直接完成',
       success: (res) => {
-        if (res.confirm) {
+        if (res.confirm && showDetail) {
           completeFault(showDetail.id);
-          setShowDetail(null);
+          const updatedFault = getFaultById(showDetail.id);
+          if (updatedFault) {
+            setShowDetail(updatedFault);
+          }
           showToast(showDetail.recheckRequired ? '已提交复检' : '整改已完成', 'success');
         }
       }
@@ -237,23 +255,28 @@ const FaultPage: React.FC = () => {
   const confirmRecheck = () => {
     if (!showDetail) return;
     recheckFault(showDetail.id, recheckResult, recheckRemark || '无');
+    const updatedFault = getFaultById(showDetail.id);
+    if (updatedFault) {
+      setShowDetail(updatedFault);
+    }
     setShowRecheckModal(false);
     setRecheckRemark('');
-    setShowDetail(null);
     showToast(recheckResult === 'pass' ? '复检通过' : '复检不通过', 'success');
   };
 
-  const canAccept = showDetail?.assigneeId === currentUser?.id && showDetail?.rectifyStatus === 'pending';
-  const canReject = showDetail?.assigneeId === currentUser?.id && showDetail?.rectifyStatus === 'pending';
+  const canAccept = showDetail?.assigneeId === currentUser?.id && showDetail?.rectifyStatus === 'assigned';
+  const canReject = showDetail?.assigneeId === currentUser?.id && showDetail?.rectifyStatus === 'assigned';
   const canComplete = showDetail?.assigneeId === currentUser?.id && showDetail?.rectifyStatus === 'processing';
   const canRecheck = showDetail?.recheckRequired && showDetail?.rectifyStatus === 'recheck';
 
   const getFaultActionColor = (status: RectifyStatus) => {
     switch (status) {
-      case 'pending': return '#ff7d00';
+      case 'pending':
+      case 'assigned': return '#ff7d00';
       case 'processing': return '#1677ff';
       case 'recheck': return '#722ed1';
-      case 'completed': return '#00b42a';
+      case 'completed':
+      case 'closed': return '#00b42a';
       default: return '#86909c';
     }
   };
@@ -515,7 +538,7 @@ const FaultPage: React.FC = () => {
 
             <View className={styles.detailHeader}>
               <View className={styles.detailStatus} style={{ backgroundColor: `${getFaultActionColor(showDetail.rectifyStatus)}15`, color: getFaultActionColor(showDetail.rectifyStatus) }}>
-                {showDetail.rectifyStatus === 'pending' ? '待处理' : showDetail.rectifyStatus === 'processing' ? '处理中' : showDetail.rectifyStatus === 'recheck' ? '待复检' : '已完成'}
+                {showDetail.rectifyStatus === 'pending' || showDetail.rectifyStatus === 'assigned' ? '待处理' : showDetail.rectifyStatus === 'processing' ? '处理中' : showDetail.rectifyStatus === 'recheck' ? '待复检' : showDetail.rectifyStatus === 'closed' ? '已关闭' : '已完成'}
               </View>
               <View className={styles.detailUrgency} style={{ backgroundColor: showDetail.urgency === 'high' ? '#f53f3f15' : showDetail.urgency === 'medium' ? '#ff7d0015' : '#86909c15', color: showDetail.urgency === 'high' ? '#f53f3f' : showDetail.urgency === 'medium' ? '#ff7d00' : '#86909c' }}>
                 {getUrgencyText(showDetail.urgency)}
@@ -550,7 +573,7 @@ const FaultPage: React.FC = () => {
               </View>
               <View className={styles.detailRow}>
                 <Text className={styles.detailLabel}>创建时间</Text>
-                <Text className={styles.detailValue}>{formatTime(showDetail.createdAt, 'MM-DD HH:mm')}</Text>
+                <Text className={styles.detailValue}>{formatTime(showDetail.reportTime, 'MM-DD HH:mm')}</Text>
               </View>
               {showDetail.acceptedAt && (
                 <View className={styles.detailRow}>

@@ -21,7 +21,8 @@ const RectifyPage: React.FC = () => {
     acceptFault,
     rejectFault,
     completeFault,
-    currentUser
+    currentUser,
+    getFaultById
   } = useInspectionStore();
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'processing' | 'recheck'>('all');
   const [showDetail, setShowDetail] = useState<FaultReport | null>(null);
@@ -44,7 +45,7 @@ const RectifyPage: React.FC = () => {
 
   const recheckList = useMemo(() => faultReports.filter(f => f.rectifyStatus === 'recheck'), [faultReports]);
   const processingList = useMemo(() => faultReports.filter(f => f.rectifyStatus === 'processing'), [faultReports]);
-  const pendingList = useMemo(() => faultReports.filter(f => f.rectifyStatus === 'pending'), [faultReports]);
+  const pendingList = useMemo(() => faultReports.filter(f => f.rectifyStatus === 'pending' || f.rectifyStatus === 'assigned'), [faultReports]);
   const timeoutList = useMemo(() => faultReports.filter(f => isFaultTimeout(f)), [faultReports]);
 
   const displayList = useMemo(() => {
@@ -58,6 +59,10 @@ const RectifyPage: React.FC = () => {
 
   const handleAccept = (fault: FaultReport) => {
     acceptFault(fault.id);
+    const updatedFault = getFaultById(fault.id);
+    if (updatedFault) {
+      setShowDetail(updatedFault);
+    }
     showToast('已接单', 'success');
   };
 
@@ -69,9 +74,12 @@ const RectifyPage: React.FC = () => {
   const confirmReject = () => {
     if (!showDetail) return;
     rejectFault(showDetail.id, rejectRemark || '无');
+    const updatedFault = getFaultById(showDetail.id);
+    if (updatedFault) {
+      setShowDetail(updatedFault);
+    }
     setShowRejectModal(false);
     setRejectRemark('');
-    setShowDetail(null);
     showToast('已退回', 'success');
   };
 
@@ -82,6 +90,10 @@ const RectifyPage: React.FC = () => {
       success: (res) => {
         if (res.confirm) {
           completeFault(fault.id);
+          const updatedFault = getFaultById(fault.id);
+          if (updatedFault) {
+            setShowDetail(updatedFault);
+          }
           showToast(fault.recheckRequired ? '已提交复检' : '整改已完成', 'success');
         }
       }
@@ -96,9 +108,12 @@ const RectifyPage: React.FC = () => {
   const confirmRecheck = () => {
     if (!showDetail) return;
     recheckFault(showDetail.id, recheckResult, recheckRemark || '无');
+    const updatedFault = getFaultById(showDetail.id);
+    if (updatedFault) {
+      setShowDetail(updatedFault);
+    }
     setShowRecheckModal(false);
     setRecheckRemark('');
-    setShowDetail(null);
     showToast(recheckResult === 'pass' ? '复检通过' : '复检不通过', 'success');
   };
 
@@ -116,12 +131,16 @@ const RectifyPage: React.FC = () => {
         status = 'recheck';
         remark = '整改完成，待复检';
       } else {
-        status = 'completed';
-        remark = '整改完成';
+        status = 'closed';
+        remark = '整改完成，无需复检';
       }
     }
 
     updateFaultProgress(fault.id, progress, status, remark);
+    const updatedFault = getFaultById(fault.id);
+    if (updatedFault) {
+      setShowDetail(updatedFault);
+    }
     showToast('进度已更新', 'success');
   };
 
@@ -142,16 +161,18 @@ const RectifyPage: React.FC = () => {
 
   const getFaultActionColor = (status: RectifyStatus) => {
     switch (status) {
-      case 'pending': return '#ff7d00';
+      case 'pending':
+      case 'assigned': return '#ff7d00';
       case 'processing': return '#1677ff';
       case 'recheck': return '#722ed1';
-      case 'completed': return '#00b42a';
+      case 'completed':
+      case 'closed': return '#00b42a';
       default: return '#86909c';
     }
   };
 
-  const canAccept = (fault: FaultReport) => fault.assigneeId === currentUser?.id && fault.rectifyStatus === 'pending';
-  const canReject = (fault: FaultReport) => fault.assigneeId === currentUser?.id && fault.rectifyStatus === 'pending';
+  const canAccept = (fault: FaultReport) => fault.assigneeId === currentUser?.id && fault.rectifyStatus === 'assigned';
+  const canReject = (fault: FaultReport) => fault.assigneeId === currentUser?.id && fault.rectifyStatus === 'assigned';
   const canComplete = (fault: FaultReport) => fault.assigneeId === currentUser?.id && fault.rectifyStatus === 'processing';
   const canRecheck = (fault: FaultReport) => fault.recheckRequired && fault.rectifyStatus === 'recheck';
 
@@ -182,7 +203,7 @@ const RectifyPage: React.FC = () => {
           <StatusTag type="rectify" status={fault.rectifyStatus} />
         </View>
         <Text className={styles.faultMeta}>
-          {fault.pointName} · {formatTime(fault.createdAt)}
+          {fault.pointName} · {formatTime(fault.reportTime)}
         </Text>
         <Text className={styles.faultDesc}>{fault.description}</Text>
 
@@ -370,7 +391,7 @@ const RectifyPage: React.FC = () => {
 
             <View className={styles.detailHeader}>
               <View className={styles.detailStatus} style={{ backgroundColor: `${getFaultActionColor(showDetail.rectifyStatus)}15`, color: getFaultActionColor(showDetail.rectifyStatus) }}>
-                {showDetail.rectifyStatus === 'pending' ? '待处理' : showDetail.rectifyStatus === 'processing' ? '处理中' : showDetail.rectifyStatus === 'recheck' ? '待复检' : '已完成'}
+                {showDetail.rectifyStatus === 'pending' || showDetail.rectifyStatus === 'assigned' ? '待处理' : showDetail.rectifyStatus === 'processing' ? '处理中' : showDetail.rectifyStatus === 'recheck' ? '待复检' : showDetail.rectifyStatus === 'closed' ? '已关闭' : '已完成'}
               </View>
               <View className={styles.detailUrgency} style={{ backgroundColor: showDetail.urgency === 'high' ? '#f53f3f15' : showDetail.urgency === 'medium' ? '#ff7d0015' : '#86909c15', color: showDetail.urgency === 'high' ? '#f53f3f' : showDetail.urgency === 'medium' ? '#ff7d00' : '#86909c' }}>
                 {getUrgencyText(showDetail.urgency)}
@@ -405,7 +426,7 @@ const RectifyPage: React.FC = () => {
               </View>
               <View className={styles.detailRow}>
                 <Text className={styles.detailLabel}>创建时间</Text>
-                <Text className={styles.detailValue}>{formatTime(showDetail.createdAt, 'MM-DD HH:mm')}</Text>
+                <Text className={styles.detailValue}>{formatTime(showDetail.reportTime, 'MM-DD HH:mm')}</Text>
               </View>
             </View>
 

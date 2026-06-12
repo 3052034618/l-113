@@ -70,7 +70,7 @@ interface InspectionState {
       recheckRequired?: boolean;
       scanRecordId?: string;
     }
-  ) => void;
+  ) => FaultReport;
   assignFault: (faultId: string, assigneeId: string, assigneeName: string) => void;
   acceptFault: (faultId: string) => void;
   rejectFault: (faultId: string, reason: string) => void;
@@ -90,6 +90,7 @@ interface InspectionState {
 
   getScanRecordById: (recordId: string) => ScanRecord | undefined;
   linkScanRecordToFault: (scanRecordId: string, faultId: string) => void;
+  getFaultById: (faultId: string) => FaultReport | undefined;
 }
 
 const updateRouteProgress = (route: InspectionRoute, scanRecords: ScanRecord[]): InspectionRoute => {
@@ -511,13 +512,24 @@ export const useInspectionStore = create<InspectionState>((set, get) => ({
         ...f.timeline,
         createTimelineItem('progress', user.id, user.name, remark || `进度更新到 ${progress}%`, progress)
       ];
-      return {
-        ...f,
+
+      const updates: Partial<FaultReport> = {
         rectifyProgress: progress,
         rectifyStatus: status,
         rectifyRemark: remark || f.rectifyRemark,
         timeline: newTimeline
       };
+
+      if (status === 'closed') {
+        updates.closedAt = new Date().toISOString();
+        newTimeline.push(createTimelineItem('close', user.id, user.name, '无需复检，自动关闭'));
+      }
+
+      if (status === 'recheck') {
+        newTimeline.push(createTimelineItem('recheck_request', user.id, user.name, '申请复检'));
+      }
+
+      return { ...f, ...updates };
     });
     set({ faultReports });
     saveToStorage('faultReports', faultReports);
@@ -648,5 +660,9 @@ export const useInspectionStore = create<InspectionState>((set, get) => ({
     );
     set({ scanRecords });
     saveToStorage('scanRecords', scanRecords);
+  },
+
+  getFaultById: (faultId) => {
+    return get().faultReports.find(f => f.id === faultId);
   }
 }));
