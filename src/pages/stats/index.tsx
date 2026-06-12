@@ -5,11 +5,11 @@ import classnames from 'classnames';
 import { useInspectionStore } from '@/store/inspection';
 import StatCard from '@/components/StatCard';
 import ProgressBar from '@/components/ProgressBar';
-import { formatDate } from '@/utils';
+import { formatDate, getDateList, isFaultTimeout, formatTime } from '@/utils';
 import styles from './index.module.scss';
 
 const StatsPage: React.FC = () => {
-  const { user, dailyStats, faultReports } = useInspectionStore();
+  const { user, getStatsByDate, faultReports, routes, scanRecords } = useInspectionStore();
   const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
 
   useDidShow(() => {
@@ -22,19 +22,35 @@ const StatsPage: React.FC = () => {
     }, 1000);
   });
 
-  const todayStats = useMemo(() => {
-    return dailyStats.find(s => s.date === selectedDate) || dailyStats[0];
-  }, [dailyStats, selectedDate]);
+  const dateList = useMemo(() => getDateList(7), []);
+
+  const currentStats = useMemo(() => {
+    return getStatsByDate(selectedDate);
+  }, [selectedDate, getStatsByDate]);
 
   const timeoutFaults = useMemo(() => {
-    return faultReports.filter(f => f.rectifyStatus !== 'completed').slice(0, 3);
-  }, [faultReports]);
+    return faultReports.filter(f => {
+      if (f.rectifyStatus === 'completed') return false;
+      const reportDate = f.reportTime.slice(0, 10);
+      return reportDate <= selectedDate && isFaultTimeout(f);
+    }).sort((a, b) => new Date(a.reportTime).getTime() - new Date(b.reportTime).getTime());
+  }, [faultReports, selectedDate]);
+
+  const historyStats = useMemo(() => {
+    return dateList.map(date => getStatsByDate(date));
+  }, [dateList, getStatsByDate]);
 
   const handleGenerateSummary = () => {
     Taro.navigateTo({ url: '/pages/summary/index' });
   };
 
-  const dateList = dailyStats.slice(0, 5).map(s => s.date);
+  const deviceRate = currentStats.totalDevices > 0
+    ? Math.round((currentStats.checkedDevices / currentStats.totalDevices) * 100)
+    : 0;
+
+  const faultRate = currentStats.faultCount > 0
+    ? Math.round((currentStats.completedFaultCount / currentStats.faultCount) * 100)
+    : 100;
 
   return (
     <ScrollView scrollY className={styles.page}>
@@ -49,9 +65,9 @@ const StatsPage: React.FC = () => {
           </View>
         </View>
         <View className={styles.statsRow}>
-          <StatCard label="今日点位" value={todayStats?.totalPoints || 0} unit="个" />
-          <StatCard label="巡检设备" value={todayStats?.checkedDevices || 0} unit="台" />
-          <StatCard label="完成率" value={todayStats?.completionRate || 0} unit="%" highlight />
+          <StatCard label="今日点位" value={currentStats.totalPoints} unit="个" />
+          <StatCard label="巡检设备" value={currentStats.checkedDevices} unit="台" />
+          <StatCard label="完成率" value={currentStats.completionRate} unit="%" highlight />
         </View>
       </View>
 
@@ -79,35 +95,35 @@ const StatsPage: React.FC = () => {
           <View className={styles.statsGrid}>
             <View className={styles.gridItem}>
               <Text className={classnames(styles.gridValue, styles.gridValueSuccess)}>
-                {todayStats?.normalCount || 0}
+                {currentStats.normalCount}
               </Text>
               <Text className={styles.gridLabel}>正常</Text>
             </View>
             <View className={styles.gridItem}>
               <Text className={classnames(styles.gridValue, styles.gridValueWarning)}>
-                {todayStats?.abnormalCount || 0}
+                {currentStats.abnormalCount}
               </Text>
               <Text className={styles.gridLabel}>异常</Text>
             </View>
             <View className={styles.gridItem}>
               <Text className={classnames(styles.gridValue, styles.gridValueError)}>
-                {todayStats?.missingCount || 0}
+                {currentStats.missingCount}
               </Text>
               <Text className={styles.gridLabel}>缺失</Text>
             </View>
             <View className={styles.gridItem}>
               <Text className={classnames(styles.gridValue, styles.gridValueInfo)}>
-                {todayStats?.disabledCount || 0}
+                {currentStats.disabledCount}
               </Text>
               <Text className={styles.gridLabel}>停用</Text>
             </View>
             <View className={styles.gridItem}>
-              <Text className={styles.gridValue}>{todayStats?.faultCount || 0}</Text>
+              <Text className={styles.gridValue}>{currentStats.faultCount}</Text>
               <Text className={styles.gridLabel}>故障数</Text>
             </View>
             <View className={styles.gridItem}>
               <Text className={classnames(styles.gridValue, styles.gridValueError)}>
-                {todayStats?.timeoutCount || 0}
+                {currentStats.timeoutCount}
               </Text>
               <Text className={styles.gridLabel}>超时项</Text>
             </View>
@@ -116,41 +132,25 @@ const StatsPage: React.FC = () => {
           <View className={styles.rateSection}>
             <View className={styles.rateHeader}>
               <Text className={styles.rateLabel}>点位完成率</Text>
-              <Text className={styles.rateValue}>{todayStats?.completionRate || 0}%</Text>
+              <Text className={styles.rateValue}>{currentStats.completionRate}%</Text>
             </View>
-            <ProgressBar progress={todayStats?.completionRate || 0} height={12} showLabel={false} />
+            <ProgressBar progress={currentStats.completionRate} height={12} showLabel={false} />
           </View>
 
           <View className={styles.rateSection}>
             <View className={styles.rateHeader}>
               <Text className={styles.rateLabel}>设备巡检率</Text>
-              <Text className={styles.rateValue}>
-                {todayStats ? Math.round((todayStats.checkedDevices / todayStats.totalDevices) * 100) : 0}%
-              </Text>
+              <Text className={styles.rateValue}>{deviceRate}%</Text>
             </View>
-            <ProgressBar
-              progress={todayStats ? Math.round((todayStats.checkedDevices / todayStats.totalDevices) * 100) : 0}
-              height={12}
-              showLabel={false}
-            />
+            <ProgressBar progress={deviceRate} height={12} showLabel={false} />
           </View>
 
           <View className={styles.rateSection}>
             <View className={styles.rateHeader}>
               <Text className={styles.rateLabel}>故障处理率</Text>
-              <Text className={styles.rateValue}>
-                {todayStats && todayStats.faultCount > 0
-                  ? Math.round((todayStats.completedFaultCount / todayStats.faultCount) * 100)
-                  : 100}%
-              </Text>
+              <Text className={styles.rateValue}>{faultRate}%</Text>
             </View>
-            <ProgressBar
-              progress={todayStats && todayStats.faultCount > 0
-                ? Math.round((todayStats.completedFaultCount / todayStats.faultCount) * 100)
-                : 100}
-              height={12}
-              showLabel={false}
-            />
+            <ProgressBar progress={faultRate} height={12} showLabel={false} />
           </View>
         </View>
 
@@ -165,7 +165,7 @@ const StatsPage: React.FC = () => {
             <View key={fault.id} className={styles.timeoutCard}>
               <Text className={styles.timeoutTitle}>{fault.deviceName}</Text>
               <Text className={styles.timeoutMeta}>
-                {fault.pointName} · 上报于 {fault.reportTime?.slice(5, 16)}
+                {fault.pointName} · 上报于 {formatTime(fault.reportTime)}
               </Text>
               <Text className={styles.timeoutDesc}>{fault.description}</Text>
             </View>
@@ -173,7 +173,7 @@ const StatsPage: React.FC = () => {
         )}
 
         <Text className={styles.sectionTitle}>📅 历史数据</Text>
-        {dailyStats.map(stat => (
+        {historyStats.map(stat => (
           <View key={stat.date} className={styles.historyItem}>
             <View>
               <Text className={styles.historyDate}>{stat.date}</Text>

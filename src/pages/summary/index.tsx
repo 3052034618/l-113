@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, Textarea } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { useInspectionStore } from '@/store/inspection';
-import { formatTime, getTodayStr, showToast } from '@/utils';
+import { formatTime, getTodayStr, showToast, getRectifyStatusText, isFaultTimeout } from '@/utils';
 import StatusTag from '@/components/StatusTag';
 import styles from './index.module.scss';
 
@@ -12,8 +12,13 @@ const SummaryPage: React.FC = () => {
   const [remarks, setRemarks] = useState('');
 
   const todayStats = getTodayStats();
+
   const pendingFaults = useMemo(() => {
     return faultReports.filter(f => f.rectifyStatus !== 'completed');
+  }, [faultReports]);
+
+  const timeoutFaults = useMemo(() => {
+    return faultReports.filter(f => isFaultTimeout(f));
   }, [faultReports]);
 
   useDidShow(() => {
@@ -32,6 +37,10 @@ const SummaryPage: React.FC = () => {
   };
 
   const handleCopy = () => {
+    const pendingText = pendingFaults.length > 0
+      ? pendingFaults.map((f, i) => `${i + 1}. ${f.deviceName} - ${f.description}（${getRectifyStatusText(f.rectifyStatus)}）`).join('\n')
+      : '暂无待办事项';
+
     const summaryText = `
 【${shift}交接班巡检摘要】
 生成时间：${formatTime(new Date())}
@@ -41,31 +50,28 @@ const SummaryPage: React.FC = () => {
 ━━━━━━━━━━━━━━━━━━
 一、巡检数据统计
 ━━━━━━━━━━━━━━━━━━
-点位巡检：${todayStats?.checkedPoints || 0}/${todayStats?.totalPoints || 0} 个
-设备巡检：${todayStats?.checkedDevices || 0}/${todayStats?.totalDevices || 0} 台
-完成率：${todayStats?.completionRate || 0}%
+点位巡检：${todayStats.checkedPoints}/${todayStats.totalPoints} 个
+设备巡检：${todayStats.checkedDevices}/${todayStats.totalDevices} 台
+完成率：${todayStats.completionRate}%
 
 状态分布：
-• 正常：${todayStats?.normalCount || 0} 台
-• 异常：${todayStats?.abnormalCount || 0} 台
-• 缺失：${todayStats?.missingCount || 0} 台
-• 停用：${todayStats?.disabledCount || 0} 台
+• 正常：${todayStats.normalCount} 台
+• 异常：${todayStats.abnormalCount} 台
+• 缺失：${todayStats.missingCount} 台
+• 停用：${todayStats.disabledCount} 台
 
 ━━━━━━━━━━━━━━━━━━
 二、故障处理情况
 ━━━━━━━━━━━━━━━━━━
-今日上报故障：${todayStats?.faultCount || 0} 项
-已完成整改：${todayStats?.completedFaultCount || 0} 项
+今日上报故障：${todayStats.faultCount} 项
+已完成整改：${todayStats.completedFaultCount} 项
 待处理/处理中：${pendingFaults.length} 项
-超时项：${todayStats?.timeoutCount || 0} 项
+超时项：${todayStats.timeoutCount} 项
 
 ━━━━━━━━━━━━━━━━━━
 三、待办事项
 ━━━━━━━━━━━━━━━━━━
-${pendingFaults.length > 0
-  ? pendingFaults.map((f, i) => `${i + 1}. ${f.deviceName} - ${f.description}（${f.rectifyStatus === 'pending' ? '待处理' : f.rectifyStatus === 'processing' ? '处理中' : '待复检'}）`).join('\n')
-  : '暂无待办事项'
-}
+${pendingText}
 
 ━━━━━━━━━━━━━━━━━━
 四、交接班备注
@@ -135,19 +141,19 @@ ${remarks || '无'}
 
           <View className={styles.statsGrid}>
             <View className={styles.gridItem}>
-              <Text className={styles.gridValuePrimary}>{todayStats?.checkedPoints || 0}</Text>
+              <Text className={styles.gridValuePrimary}>{todayStats.checkedPoints}</Text>
               <Text className={styles.gridLabel}>已检点位</Text>
             </View>
             <View className={styles.gridItem}>
-              <Text className={styles.gridValueSuccess}>{todayStats?.normalCount || 0}</Text>
+              <Text className={styles.gridValueSuccess}>{todayStats.normalCount}</Text>
               <Text className={styles.gridLabel}>正常</Text>
             </View>
             <View className={styles.gridItem}>
-              <Text className={styles.gridValueWarning}>{todayStats?.abnormalCount || 0}</Text>
+              <Text className={styles.gridValueWarning}>{todayStats.abnormalCount}</Text>
               <Text className={styles.gridLabel}>异常</Text>
             </View>
             <View className={styles.gridItem}>
-              <Text className={styles.gridValueError}>{todayStats?.missingCount || 0}</Text>
+              <Text className={styles.gridValueError}>{todayStats.missingCount}</Text>
               <Text className={styles.gridLabel}>缺失</Text>
             </View>
           </View>
@@ -155,34 +161,34 @@ ${remarks || '无'}
           <Text className={styles.sectionTitle}>📊 巡检概况</Text>
           <View className={styles.dataRow}>
             <Text className={styles.dataLabel}>点位完成率</Text>
-            <Text className={styles.dataValue}>{todayStats?.completionRate || 0}%</Text>
+            <Text className={styles.dataValue}>{todayStats.completionRate}%</Text>
           </View>
           <View className={styles.dataRow}>
             <Text className={styles.dataLabel}>设备巡检率</Text>
             <Text className={styles.dataValue}>
-              {todayStats?.checkedDevices || 0} / {todayStats?.totalDevices || 0} 台
+              {todayStats.checkedDevices} / {todayStats.totalDevices} 台
             </Text>
           </View>
           <View className={styles.dataRow}>
             <Text className={styles.dataLabel}>停用设备</Text>
-            <Text className={styles.dataValue}>{todayStats?.disabledCount || 0} 台</Text>
+            <Text className={styles.dataValue}>{todayStats.disabledCount} 台</Text>
           </View>
 
           <Text className={styles.sectionTitle}>🔧 故障处理</Text>
           <View className={styles.dataRow}>
             <Text className={styles.dataLabel}>今日上报</Text>
-            <Text className={styles.dataValue}>{todayStats?.faultCount || 0} 项</Text>
+            <Text className={styles.dataValue}>{todayStats.faultCount} 项</Text>
           </View>
           <View className={styles.dataRow}>
             <Text className={styles.dataLabel}>已完成整改</Text>
             <Text className={styles.dataValue} style={{ color: '#00b42a' }}>
-              {todayStats?.completedFaultCount || 0} 项
+              {todayStats.completedFaultCount} 项
             </Text>
           </View>
           <View className={styles.dataRow}>
             <Text className={styles.dataLabel}>超时项</Text>
             <Text className={styles.dataValue} style={{ color: '#f53f3f' }}>
-              {todayStats?.timeoutCount || 0} 项
+              {todayStats.timeoutCount} 项
             </Text>
           </View>
 
@@ -202,6 +208,11 @@ ${remarks || '无'}
                 {fault.assigneeName && (
                   <Text style={{ fontSize: 22, color: '#165dff', marginTop: 4 }}>
                     负责人：{fault.assigneeName}
+                  </Text>
+                )}
+                {isFaultTimeout(fault) && (
+                  <Text style={{ fontSize: 22, color: '#f53f3f', marginTop: 4 }}>
+                    ⚠️ 已超时
                   </Text>
                 )}
               </View>

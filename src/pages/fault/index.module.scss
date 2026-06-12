@@ -65,6 +65,138 @@
   color: $color-text-white;
 }
 
+.filterTabCount {
+  margin-left: 6rpx;
+  font-size: $font-size-xs;
+  opacity: 0.8;
+}
+
+.groupSection {
+  margin-bottom: $spacing-lg;
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+}
+
+.groupIcon {
+  font-size: 32rpx;
+  margin-right: $spacing-xs;
+}
+
+.groupTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  flex: 1;
+}
+
+.groupCount {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.prefillNotice {
+  display: flex;
+  align-items: center;
+  padding: $spacing-sm $spacing-md;
+  background-color: $color-primary-bg;
+  border-radius: $radius-md;
+  margin-bottom: $spacing-lg;
+}
+
+.prefillNoticeIcon {
+  font-size: 28rpx;
+  margin-right: $spacing-xs;
+}
+
+.prefillNoticeText {
+  font-size: $font-size-sm;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.urgencyHint {
+  font-size: 20rpx;
+  opacity: 0.7;
+  margin-top: 4rpx;
+}
+
+.urgencyBtn {
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.assigneeBtn {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.assigneeAvatar {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, $color-primary-light 0%, $color-primary 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.assigneeAvatarText {
+  font-size: $font-size-xs;
+  color: $color-text-white;
+  font-weight: $font-weight-semibold;
+}
+
+.assigneeBtnText {
+  font-size: $font-size-sm;
+}
+
+.recheckRow {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.recheckBtn {
+  flex: 1;
+  height: $button-height-md;
+  border-radius: $radius-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-xs;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  border: 2rpx solid $color-border;
+  background-color: $color-bg-card;
+  color: $color-text-secondary;
+  transition: all $transition-fast;
+}
+
+.recheckBtnActive {
+  background-color: $color-success-bg;
+  border-color: $color-success;
+  color: $color-success;
+}
+
+.recheckIcon {
+  opacity: 0;
+  transition: opacity $transition-fast;
+}
+
+.recheckBtnActive .recheckIcon {
+  opacity: 1;
+}
+
+.recheckHint {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: $spacing-xs;
+}
+
 .fab {
   position: fixed;
   right: $page-padding;

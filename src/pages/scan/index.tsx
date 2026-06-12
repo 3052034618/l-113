@@ -4,18 +4,20 @@ import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import classnames from 'classnames';
 import { useInspectionStore } from '@/store/inspection';
 import StatusTag from '@/components/StatusTag';
-import { formatTime, showToast } from '@/utils';
+import { formatTime, showToast, getNetworkStatus, setNetworkStatus } from '@/utils';
 import type { InspectionStatus } from '@/types/inspection';
 import styles from './index.module.scss';
 
 type FilterType = 'all' | 'normal' | 'abnormal' | 'missing' | 'disabled' | 'offline';
 
 const ScanPage: React.FC = () => {
-  const { scanRecords, syncOfflineRecords, addScanRecord, routes, currentRouteId } = useInspectionStore();
+  const { scanRecords, syncOfflineRecords, addScanRecord, routes, currentRouteId, addFaultReport, maintainers } = useInspectionStore();
   const [filter, setFilter] = useState<FilterType>('all');
+  const [isOnline, setIsOnline] = useState<boolean>(getNetworkStatus() === 'online');
 
   useDidShow(() => {
     console.log('[Scan] 页面显示');
+    setIsOnline(getNetworkStatus() === 'online');
   });
 
   usePullDownRefresh(() => {
@@ -28,11 +30,28 @@ const ScanPage: React.FC = () => {
     return scanRecords.filter(r => r.isOffline && !r.synced).length;
   }, [scanRecords]);
 
+  const todayRecords = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return scanRecords.filter(r => r.scanTime.slice(0, 10) === today);
+  }, [scanRecords]);
+
   const filteredRecords = useMemo(() => {
-    if (filter === 'all') return scanRecords;
-    if (filter === 'offline') return scanRecords.filter(r => r.isOffline);
-    return scanRecords.filter(r => r.status === filter);
-  }, [scanRecords, filter]);
+    const records = todayRecords;
+    if (filter === 'all') return records;
+    if (filter === 'offline') return records.filter(r => r.isOffline);
+    return records.filter(r => r.status === filter);
+  }, [todayRecords, filter]);
+
+  const currentRoute = useMemo(() => {
+    return routes.find(r => r.id === currentRouteId) || null;
+  }, [routes, currentRouteId]);
+
+  const toggleNetwork = () => {
+    const newStatus = isOnline ? 'offline' : 'online';
+    setNetworkStatus(newStatus);
+    setIsOnline(!isOnline);
+    showToast(isOnline ? '已切换到离线模式' : '已切换到在线模式', 'none');
+  };
 
   const handleScan = async () => {
     try {
@@ -41,16 +60,14 @@ const ScanPage: React.FC = () => {
         scanType: ['qrCode', 'barCode']
       });
 
-      console.log('[Scan] 扫码结果:', res.result);
-
       const assetCode = res.result;
-      const currentRoute = routes.find(r => r.id === currentRouteId);
+      const route = currentRoute;
 
       let matchedDevice = null;
       let matchedPoint = null;
 
-      if (currentRoute) {
-        for (const point of currentRoute.points) {
+      if (route) {
+        for (const point of route.points) {
           const device = point.devices.find(d => d.assetCode === assetCode);
           if (device) {
             matchedDevice = device;
@@ -98,8 +115,6 @@ const ScanPage: React.FC = () => {
             }
           }
 
-          const isOffline = !Taro.getStorageSync('networkStatus') || Taro.getStorageSync('networkStatus') === 'offline';
-
           addScanRecord({
             deviceId: matchedDevice!.id,
             assetCode: matchedDevice!.assetCode,
@@ -109,10 +124,33 @@ const ScanPage: React.FC = () => {
             status: selectedStatus,
             remark,
             photos,
-            isOffline
+            isOffline: !isOnline
           });
 
-          showToast('记录已保存', 'success');
+          if (selectedStatus === 'abnormal' && isOnline) {
+            Taro.showModal({
+              title: '是否上报故障？',
+              content: '检测到异常状态，是否立即上报故障单？',
+              confirmText: '立即上报',
+              cancelText: '暂不上报',
+              success: (modalRes) => {
+                if (modalRes.confirm) {
+                  addFaultReport({
+                    deviceId: matchedDevice!.id,
+                    assetCode: matchedDevice!.assetCode,
+                    deviceName: matchedDevice!.name,
+                    pointId: matchedPoint!.id,
+                    pointName: matchedPoint!.name,
+                    description: remark || `${matchedDevice!.name} 巡检发现异常`,
+                    urgency: 'medium',
+                    photos,
+                    assigneeId: maintainers[0]?.id,
+                    assigneeName: maintainers[0]?.name
+                  });
+                }
+              }
+            });
+          }
         }
       });
     } catch (e) {
@@ -122,33 +160,46 @@ const ScanPage: React.FC = () => {
   };
 
   const handleSync = () => {
-    syncOfflineRecords();
+    const count = syncOfflineRecords();
+    if (count > 0) {
+      setIsOnline(true);
+    }
   };
 
-  const filterOptions: { key: FilterType; label: string }[] = [
+  const filterOptions: { key: FilterType; label: string; count?: number }[] = [
     { key: 'all', label: '全部' },
     { key: 'normal', label: '正常' },
     { key: 'abnormal', label: '异常' },
     { key: 'missing', label: '缺失' },
     { key: 'disabled', label: '停用' },
-    { key: 'offline', label: '离线' }
+    { key: 'offline', label: '待同步' }
   ];
 
   return (
     <ScrollView scrollY className={styles.page}>
       <View className={styles.scanArea}>
+        <View className={classnames(styles.networkBadge, isOnline ? styles.online : styles.offline)} onClick={toggleNetwork}>
+          <View className={styles.networkDot} />
+          <Text className={styles.networkText}>{isOnline ? '在线' : '离线'}</Text>
+        </View>
+
         <View className={styles.scanBtn} onClick={handleScan}>
           <Text className={styles.scanIcon}>📷</Text>
           <Text className={styles.scanBtnText}>扫描资产码</Text>
         </View>
-        <Text className={styles.scanHint}>点击按钮扫描设备资产二维码</Text>
+        <Text className={styles.scanHint}>
+          {currentRoute ? `当前路线：${currentRoute.name}` : '点击按钮扫描设备资产二维码'}
+        </Text>
       </View>
 
       {offlineCount > 0 && (
         <View className={styles.offlineBar}>
           <View className={styles.offlineInfo}>
-            <Text className={styles.offlineText}>有 {offlineCount} 条离线记录待同步</Text>
-            <Text className={styles.offlineCount}>连接网络后点击同步按钮上传</Text>
+            <Text className={styles.offlineIcon}>📡</Text>
+            <View>
+              <Text className={styles.offlineText}>有 {offlineCount} 条记录待同步</Text>
+              <Text className={styles.offlineCount}>连接网络后点击同步按钮上传</Text>
+            </View>
           </View>
           <View className={styles.syncBtn} onClick={handleSync}>
             立即同步
@@ -158,39 +209,55 @@ const ScanPage: React.FC = () => {
 
       <View className={styles.section}>
         <View className={styles.sectionHeader}>
-          <Text className={styles.sectionTitle}>扫码记录</Text>
-          <ScrollView scrollX className={styles.filterTabs}>
-            {filterOptions.map(opt => (
+          <Text className={styles.sectionTitle}>今日扫码记录</Text>
+          <Text className={styles.recordCount}>共 {todayRecords.length} 条</Text>
+        </View>
+
+        <ScrollView scrollX className={styles.filterTabs}>
+          {filterOptions.map(opt => {
+            const count = opt.key === 'all' ? todayRecords.length
+              : opt.key === 'offline' ? offlineCount
+              : todayRecords.filter(r => r.status === opt.key).length;
+            return (
               <View
                 key={opt.key}
                 className={classnames(styles.filterTab, filter === opt.key && styles.filterTabActive)}
                 onClick={() => setFilter(opt.key)}
               >
                 {opt.label}
+                <Text className={styles.filterCount}>{count}</Text>
               </View>
-            ))}
-          </ScrollView>
-        </View>
+            );
+          })}
+        </ScrollView>
 
         {filteredRecords.length === 0 ? (
           <View className={styles.emptyState}>
             <Text className={styles.emptyIcon}>📋</Text>
             <Text className={styles.emptyText}>暂无扫码记录</Text>
+            <Text className={styles.emptyHint}>点击上方按钮开始巡检</Text>
           </View>
         ) : (
           filteredRecords.map(record => (
             <View key={record.id} className={styles.recordItem}>
               <View className={styles.recordHeader}>
                 <Text className={styles.recordDevice}>{record.deviceName}</Text>
-                {record.isOffline && !record.synced && (
-                  <View className={styles.recordOffline}>离线</View>
-                )}
-                <StatusTag type="inspection" status={record.status} />
+                <View className={styles.recordTags}>
+                  {record.isOffline && !record.synced && (
+                    <View className={styles.recordOffline}>待同步</View>
+                  )}
+                  {record.synced && !record.isOffline && (
+                    <View className={styles.recordSynced}>已提交</View>
+                  )}
+                  <StatusTag type="inspection" status={record.status} />
+                </View>
               </View>
               <View className={styles.recordBody}>
                 <Text className={styles.recordMeta}>资产编号：{record.assetCode}</Text>
                 <Text className={styles.recordMeta}>{record.pointName}</Text>
-                <Text className={styles.recordMeta}>{formatTime(record.scanTime)} · {record.inspectorName}</Text>
+                <Text className={styles.recordMeta}>
+                  {formatTime(record.scanTime, 'HH:mm')} · {record.inspectorName}
+                </Text>
                 {record.remark && (
                   <Text className={styles.recordRemark}>备注：{record.remark}</Text>
                 )}
@@ -204,6 +271,11 @@ const ScanPage: React.FC = () => {
                         className={styles.recordPhoto}
                       />
                     ))}
+                  </View>
+                )}
+                {record.status === 'abnormal' && (
+                  <View className={styles.reportBtn}>
+                    <Text className={styles.reportBtnText}>+ 上报故障</Text>
                   </View>
                 )}
               </View>

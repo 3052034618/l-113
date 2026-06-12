@@ -171,3 +171,192 @@
   color: $color-text-tertiary;
   margin-top: $spacing-md;
 }
+
+.currentRouteCard {
+  margin: -24rpx $page-padding $spacing-md;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+}
+
+.currentRouteHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.currentRouteBadge {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: $color-text-white;
+  font-size: $font-size-xs;
+  padding: 4rpx 12rpx;
+  border-radius: $radius-xs;
+  margin-right: $spacing-sm;
+}
+
+.currentRouteName {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-white;
+}
+
+.currentRouteProgress {
+  margin-bottom: $spacing-md;
+}
+
+.currentRouteProgressText {
+  font-size: $font-size-xs;
+  color: rgba(255, 255, 255, 0.85);
+  margin-top: 8rpx;
+  text-align: right;
+}
+
+.currentRouteActions {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.currentRouteBtnPrimary {
+  flex: 1;
+  height: $button-height-sm;
+  background-color: $color-text-white;
+  color: $color-primary;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.currentRouteBtnSecondary {
+  flex: 1;
+  height: $button-height-sm;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: $color-text-white;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.tabSwitch {
+  display: flex;
+  background-color: $color-bg-page;
+  border-radius: $radius-button;
+  padding: 4rpx;
+}
+
+.tabItem {
+  padding: 8rpx 24rpx;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  border-radius: $radius-button;
+  transition: all $transition-base;
+}
+
+.tabActive {
+  background-color: $color-primary;
+  color: $color-text-white;
+}
+
+.routeTimeRow {
+  display: flex;
+  margin-bottom: $spacing-sm;
+}
+
+.timeLabel {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.timeValue {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.actionRow {
+  display: flex;
+  align-items: center;
+}
+
+.actionBtnCompleted {
+  width: 100%;
+  height: $button-height-md;
+  border-radius: $radius-button;
+  background-color: $color-success-bg;
+  color: $color-success;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pointsLabel {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-sm;
+  display: block;
+}
+
+.routeCardActive {
+  border: 2rpx solid $color-primary;
+}
+
+.resultCard {
+  margin-top: $spacing-md;
+  padding: $spacing-md;
+  background-color: $color-bg-page;
+  border-radius: $radius-md;
+}
+
+.resultTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.resultGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.resultItem {
+  width: calc(50% - 8rpx);
+  padding: $spacing-md;
+  background-color: $color-bg-card;
+  border-radius: $radius-sm;
+  text-align: center;
+}
+
+.resultValue {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+}
+
+.resultValueSuccess {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-success;
+}
+
+.resultLabel {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  margin-top: 4rpx;
+}

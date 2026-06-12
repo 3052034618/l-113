@@ -18,7 +18,7 @@ export const mockUser: UserProfile = {
   phone: '13800138000'
 };
 
-const createDevices = (pointId: string, prefix: string, count: number): AssetDevice[] => {
+const createDevices = (pointId: string, prefix: string, count: number, withCheckTime = false): AssetDevice[] => {
   const categories = ['服务器', '交换机', '空调', 'UPS', '监控摄像头', '投影仪', '门禁系统'];
   const models = ['Pro-2000', 'X-100', 'Smart-V3', 'Standard-500', 'Enterprise-9000'];
   return Array.from({ length: count }, (_, i) => ({
@@ -29,8 +29,8 @@ const createDevices = (pointId: string, prefix: string, count: number): AssetDev
     model: models[i % models.length],
     location: `A栋${pointId}区`,
     pointId,
-    status: (['normal', 'normal', 'normal', 'abnormal', 'missing', 'disabled'] as const)[i % 6],
-    lastCheckTime: i % 3 === 0 ? '2026-06-11 14:30' : undefined
+    status: 'normal' as const,
+    lastCheckTime: withCheckTime ? '2026-06-11 14:30' : undefined
   }));
 };
 
@@ -42,7 +42,7 @@ export const mockRoutes: InspectionRoute[] = [
     inspectorId: 'U001',
     inspectorName: '张工',
     totalPoints: 4,
-    checkedPoints: 2,
+    checkedPoints: 1,
     status: 'in_progress',
     startTime: '2026-06-12 08:30',
     points: [
@@ -53,9 +53,18 @@ export const mockRoutes: InspectionRoute[] = [
         building: 'A栋',
         floor: '1层',
         totalDevices: 8,
-        checkedDevices: 8,
+        checkedDevices: 3,
         order: 1,
-        devices: createDevices('P001', 'A1', 8)
+        devices: (() => {
+          const devs = createDevices('P001', 'A1', 8);
+          devs[0].lastCheckTime = '2026-06-12 08:45';
+          devs[0].status = 'normal';
+          devs[2].lastCheckTime = '2026-06-12 08:52';
+          devs[2].status = 'abnormal';
+          devs[4].lastCheckTime = '2026-06-12 08:58';
+          devs[4].status = 'normal';
+          return devs;
+        })()
       },
       {
         id: 'P002',
@@ -64,9 +73,16 @@ export const mockRoutes: InspectionRoute[] = [
         building: 'A栋',
         floor: '3层',
         totalDevices: 6,
-        checkedDevices: 4,
+        checkedDevices: 2,
         order: 2,
-        devices: createDevices('P002', 'A3', 6)
+        devices: (() => {
+          const devs = createDevices('P002', 'A3', 6);
+          devs[1].lastCheckTime = '2026-06-12 09:20';
+          devs[1].status = 'normal';
+          devs[3].lastCheckTime = '2026-06-12 09:35';
+          devs[3].status = 'missing';
+          return devs;
+        })()
       },
       {
         id: 'P003',
