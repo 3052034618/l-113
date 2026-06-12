@@ -2,15 +2,17 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, Textarea } from '@tarojs/components';
 import Taro, { useDidShow, useRouter } from '@tarojs/taro';
 import { useInspectionStore } from '@/store/inspection';
-import { formatTime, getTodayStr, showToast, getRectifyStatusText, isFaultTimeout, getShiftList, formatDate } from '@/utils';
+import { formatTime, getTodayStr, showToast, getRectifyStatusText, isFaultTimeout, getShiftList, formatDate, getCurrentShift } from '@/utils';
 import StatusTag from '@/components/StatusTag';
 import type { ShiftType } from '@/types/inspection';
 import styles from './index.module.scss';
 
 const SummaryPage: React.FC = () => {
-  const { user, getStatsByDateAndShift, faultReports, getCurrentShift } = useInspectionStore();
+  const { user, getStatsByDateAndShift, faultReports } = useInspectionStore();
   const router = useRouter();
-  const initialShift = (router.params.shift as ShiftType) || getCurrentShift();
+  const initialShift = ((router.params.shift as ShiftType) && ['早班', '中班', '晚班'].includes(router.params.shift as ShiftType))
+    ? (router.params.shift as ShiftType)
+    : getCurrentShift();
   const [shift, setShift] = useState<ShiftType>(initialShift);
   const [remarks, setRemarks] = useState('');
   const selectedDate = formatDate(new Date());
@@ -18,7 +20,11 @@ const SummaryPage: React.FC = () => {
   const todayStats = getStatsByDateAndShift(selectedDate, shift);
 
   const pendingFaults = useMemo(() => {
-    return faultReports.filter(f => f.rectifyStatus !== 'completed' && f.shift === shift);
+    return faultReports.filter(f =>
+      f.rectifyStatus !== 'completed' &&
+      f.rectifyStatus !== 'closed' &&
+      f.shift === shift
+    );
   }, [faultReports, shift]);
 
   const timeoutFaults = useMemo(() => {

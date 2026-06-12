@@ -262,7 +262,7 @@ const RectifyPage: React.FC = () => {
                 复检
               </View>
             )}
-            {fault.rectifyStatus === 'processing' && !canComplete(fault) && fault.assigneeName && (
+            {fault.rectifyStatus === 'processing' && fault.assigneeId === currentUser?.id && (
               <View className={styles.actionBtn} onClick={() => handleUpdateProgress(fault)}>
                 更新
               </View>
