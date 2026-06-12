@@ -7,7 +7,12 @@ import type {
   ScanRecord,
   FaultReport,
   InspectionRoute,
-  DailyStats
+  DailyStats,
+  ShiftType,
+  SyncStatus,
+  TimelineAction,
+  FaultTimelineItem,
+  RouteMemberResult
 } from '@/types/inspection';
 
 export const formatTime = (date: string | Date, format = 'YYYY-MM-DD HH:mm'): string => {
@@ -40,11 +45,49 @@ export const getUrgencyText = (urgency: UrgencyLevel): string => {
 export const getRectifyStatusText = (status: RectifyStatus): string => {
   const map: Record<RectifyStatus, string> = {
     pending: '待处理',
+    assigned: '已指派',
+    accepted: '已接单',
+    rejected: '已退回',
     processing: '处理中',
     completed: '已完成',
-    recheck: '待复检'
+    recheck: '待复检',
+    closed: '已关闭'
   };
   return map[status];
+};
+
+export const getTimelineActionText = (action: TimelineAction): string => {
+  const map: Record<TimelineAction, string> = {
+    create: '创建故障单',
+    assign: '指派维修负责人',
+    accept: '接单',
+    reject: '退回',
+    start: '开始整改',
+    progress: '更新进度',
+    complete: '整改完成',
+    recheck_request: '申请复检',
+    recheck_pass: '复检通过',
+    recheck_fail: '复检不通过',
+    close: '关闭工单'
+  };
+  return map[action];
+};
+
+export const getSyncStatusText = (status: SyncStatus): string => {
+  const map: Record<SyncStatus, string> = {
+    pending: '待上传',
+    syncing: '同步中',
+    synced: '已同步',
+    failed: '同步失败'
+  };
+  return map[status];
+};
+
+export const getCurrentShift = (): ShiftType => {
+  const hour = dayjs().hour();
+  if (hour >= 6 && hour < 14) return '早班';
+  if (hour >= 14 && hour < 22) return '中班';
+  return '晚班';
 };
 
 export const generateId = (): string => {
@@ -83,7 +126,7 @@ export const showToast = (title: string, icon: 'success' | 'error' | 'none' = 'n
 };
 
 export const isFaultTimeout = (fault: FaultReport): boolean => {
-  if (fault.rectifyStatus === 'completed') return false;
+  if (fault.rectifyStatus === 'completed' || fault.rectifyStatus === 'closed') return false;
   const now = dayjs();
   const reportTime = dayjs(fault.reportTime);
   const hoursPassed = now.diff(reportTime, 'hour');
@@ -96,8 +139,27 @@ export const isFaultTimeout = (fault: FaultReport): boolean => {
   return hoursPassed > thresholdMap[fault.urgency];
 };
 
+export const createTimelineItem = (
+  action: TimelineAction,
+  operatorId: string,
+  operatorName: string,
+  remark?: string,
+  progress?: number
+): FaultTimelineItem => {
+  return {
+    id: generateId(),
+    action,
+    operatorId,
+    operatorName,
+    time: new Date().toISOString(),
+    remark,
+    progress
+  };
+};
+
 export const calcStatsFromRecords = (
   date: string,
+  shift: ShiftType,
   routes: InspectionRoute[],
   scanRecords: ScanRecord[],
   faultReports: FaultReport[]
@@ -107,15 +169,15 @@ export const calcStatsFromRecords = (
 
   const dayRecords = scanRecords.filter(r => {
     const t = dayjs(r.scanTime);
-    return t.isAfter(dayStart) && t.isBefore(dayEnd);
+    return t.isAfter(dayStart) && t.isBefore(dayEnd) && r.shift === shift && r.syncStatus === 'synced';
   });
 
   const dayFaults = faultReports.filter(f => {
     const t = dayjs(f.reportTime);
-    return t.isAfter(dayStart) && t.isBefore(dayEnd);
+    return t.isAfter(dayStart) && t.isBefore(dayEnd) && f.shift === shift;
   });
 
-  const dayRoutes = routes.filter(r => r.date === date);
+  const dayRoutes = routes.filter(r => r.date === date && r.shift === shift);
 
   let totalPoints = 0;
   let checkedPoints = 0;
@@ -150,12 +212,13 @@ export const calcStatsFromRecords = (
     statusCounts[record.status]++;
   });
 
-  const completedFaultCount = dayFaults.filter(f => f.rectifyStatus === 'completed').length;
+  const completedFaultCount = dayFaults.filter(f => f.rectifyStatus === 'completed' || f.rectifyStatus === 'closed').length;
   const timeoutCount = dayFaults.filter(f => isFaultTimeout(f)).length;
   const completionRate = calcCompletionRate(checkedPoints, totalPoints);
 
   return {
     date,
+    shift,
     totalPoints,
     checkedPoints,
     totalDevices,
@@ -171,6 +234,65 @@ export const calcStatsFromRecords = (
   };
 };
 
+export const calcRouteMemberResults = (
+  route: InspectionRoute,
+  scanRecords: ScanRecord[]
+): RouteMemberResult[] => {
+  const results: RouteMemberResult[] = [];
+  const memberMap = new Map<string, RouteMemberResult>();
+
+  route.points.forEach(point => {
+    const assignment = point.assignment;
+    if (!assignment) return;
+
+    const pointScans = scanRecords.filter(r => r.pointId === point.id);
+    const checkedDevices = pointScans.filter(r => r.syncStatus === 'synced').length;
+    const abnormalDevices = pointScans.filter(r => r.status === 'abnormal' && r.syncStatus === 'synced').length;
+
+    const assigneeId = assignment.assigneeId;
+    if (!memberMap.has(assigneeId)) {
+      memberMap.set(assigneeId, {
+        userId: assigneeId,
+        userName: assignment.assigneeName,
+        checkedDevices: 0,
+        abnormalDevices: 0,
+        durationMinutes: 0,
+        pointIds: []
+      });
+    }
+
+    const result = memberMap.get(assigneeId)!;
+    result.checkedDevices += checkedDevices;
+    result.abnormalDevices += abnormalDevices;
+    result.pointIds.push(point.id);
+
+    if (assignment.startTime && assignment.endTime) {
+      const duration = dayjs(assignment.endTime).diff(dayjs(assignment.startTime), 'minute');
+      result.durationMinutes += duration;
+    }
+
+    if (assignment.assistMemberIds) {
+      assignment.assistMemberIds.forEach((assistId, idx) => {
+        if (!memberMap.has(assistId)) {
+          memberMap.set(assistId, {
+            userId: assistId,
+            userName: assignment.assistMemberNames?.[idx] || '协作者',
+            checkedDevices: 0,
+            abnormalDevices: 0,
+            durationMinutes: 0,
+            pointIds: []
+          });
+        }
+        const assistResult = memberMap.get(assistId)!;
+        assistResult.pointIds.push(point.id);
+        assistResult.checkedDevices += Math.floor(checkedDevices / 2);
+      });
+    }
+  });
+
+  return Array.from(memberMap.values());
+};
+
 export const getDateList = (days: number = 7): string[] => {
   const dates: string[] = [];
   for (let i = 0; i < days; i++) {
@@ -179,8 +301,20 @@ export const getDateList = (days: number = 7): string[] => {
   return dates;
 };
 
+export const getShiftList = (): ShiftType[] => ['早班', '中班', '晚班'];
+
 export const isSameDay = (time1: string | Date, time2: string | Date): boolean => {
   return dayjs(time1).format('YYYY-MM-DD') === dayjs(time2).format('YYYY-MM-DD');
+};
+
+export const isSameShift = (time1: string | Date, time2: string | Date): boolean => {
+  const getShift = (t: string | Date) => {
+    const h = dayjs(t).hour();
+    if (h >= 6 && h < 14) return '早班';
+    if (h >= 14 && h < 22) return '中班';
+    return '晚班';
+  };
+  return isSameDay(time1, time2) && getShift(time1) === getShift(time2);
 };
 
 export const getNetworkStatus = (): 'online' | 'offline' => {
@@ -198,4 +332,48 @@ export const setNetworkStatus = (status: 'online' | 'offline'): void => {
   } catch (e) {
     console.error('[Storage] 网络状态保存失败', e);
   }
+};
+
+export const mergeStatsByDate = (statsList: DailyStats[]): Omit<DailyStats, 'shift'> => {
+  if (statsList.length === 0) {
+    return {
+      date: getTodayStr(),
+      totalPoints: 0,
+      checkedPoints: 0,
+      totalDevices: 0,
+      checkedDevices: 0,
+      normalCount: 0,
+      abnormalCount: 0,
+      missingCount: 0,
+      disabledCount: 0,
+      faultCount: 0,
+      completedFaultCount: 0,
+      timeoutCount: 0,
+      completionRate: 0
+    };
+  }
+
+  const merged = statsList.reduce((acc, stat) => ({
+    totalPoints: acc.totalPoints + stat.totalPoints,
+    checkedPoints: acc.checkedPoints + stat.checkedPoints,
+    totalDevices: acc.totalDevices + stat.totalDevices,
+    checkedDevices: acc.checkedDevices + stat.checkedDevices,
+    normalCount: acc.normalCount + stat.normalCount,
+    abnormalCount: acc.abnormalCount + stat.abnormalCount,
+    missingCount: acc.missingCount + stat.missingCount,
+    disabledCount: acc.disabledCount + stat.disabledCount,
+    faultCount: acc.faultCount + stat.faultCount,
+    completedFaultCount: acc.completedFaultCount + stat.completedFaultCount,
+    timeoutCount: acc.timeoutCount + stat.timeoutCount
+  }), {
+    totalPoints: 0, checkedPoints: 0, totalDevices: 0, checkedDevices: 0,
+    normalCount: 0, abnormalCount: 0, missingCount: 0, disabledCount: 0,
+    faultCount: 0, completedFaultCount: 0, timeoutCount: 0
+  });
+
+  return {
+    date: statsList[0].date,
+    ...merged,
+    completionRate: calcCompletionRate(merged.checkedPoints, merged.totalPoints)
+  };
 };

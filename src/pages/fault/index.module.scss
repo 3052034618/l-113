@@ -452,3 +452,231 @@
   font-size: $font-size-md;
   color: $color-text-tertiary;
 }
+
+.modalContentSmall {
+  width: 100%;
+  background-color: $color-bg-card;
+  border-radius: $radius-xl $radius-xl 0 0;
+  padding: $spacing-xl $page-padding;
+  padding-bottom: calc(#{$spacing-xl} + env(safe-area-inset-bottom));
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.detailHeader {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-lg;
+}
+
+.detailStatus {
+  padding: 6rpx 20rpx;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.detailUrgency {
+  padding: 6rpx 20rpx;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.detailSection {
+  margin-bottom: $spacing-lg;
+}
+
+.detailSectionTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.detailRow {
+  display: flex;
+  padding: $spacing-sm 0;
+  border-bottom: 1rpx solid $color-border;
+}
+
+.detailLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  width: 160rpx;
+  flex-shrink: 0;
+}
+
+.detailValue {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  flex: 1;
+}
+
+.detailPhotos {
+  display: flex;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.detailPhoto {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: $radius-md;
+  background-color: $color-bg-hover;
+}
+
+.timeline {
+  position: relative;
+  padding-left: 32rpx;
+}
+
+.timelineItem {
+  position: relative;
+  padding-bottom: $spacing-lg;
+}
+
+.timelineItem:last-child {
+  padding-bottom: 0;
+}
+
+.timelineDot {
+  position: absolute;
+  left: -32rpx;
+  top: 4rpx;
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: $radius-round;
+  background-color: $color-primary;
+  box-shadow: 0 0 0 4rpx rgba(22, 119, 255, 0.15);
+}
+
+.timelineLine {
+  position: absolute;
+  left: -25rpx;
+  top: 24rpx;
+  width: 2rpx;
+  height: calc(100% - 20rpx);
+  background-color: $color-border;
+}
+
+.timelineContent {
+  padding-left: $spacing-sm;
+}
+
+.timelineHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4rpx;
+}
+
+.timelineAction {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+}
+
+.timelineTime {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.timelineOperator {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  margin-bottom: 4rpx;
+}
+
+.timelineRemark {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  margin-top: 4rpx;
+}
+
+.detailActions {
+  display: flex;
+  gap: $spacing-sm;
+  margin-top: $spacing-xl;
+}
+
+.detailActionBtn {
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  transition: all $transition-fast;
+}
+
+.detailActionBtnPrimary {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  color: $color-text-white;
+}
+
+.detailActionBtnDanger {
+  background-color: $color-error-bg;
+  color: $color-error;
+}
+
+.modalActions {
+  display: flex;
+  gap: $spacing-sm;
+  margin-top: $spacing-xl;
+}
+
+.modalActionBtn {
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  transition: all $transition-fast;
+}
+
+.modalActionBtnCancel {
+  background-color: $color-bg-page;
+  color: $color-text-secondary;
+}
+
+.modalActionBtnConfirm {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  color: $color-text-white;
+}
+
+.recheckResultRow {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.recheckResultBtn {
+  flex: 1;
+  height: $button-height-md;
+  border-radius: $radius-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  border: 2rpx solid $color-border;
+  background-color: $color-bg-card;
+  color: $color-text-secondary;
+  transition: all $transition-fast;
+}
+
+.recheckResultBtnPass {
+  background-color: $color-success-bg;
+  border-color: $color-success;
+  color: $color-success;
+}
+
+.recheckResultBtnFail {
+  background-color: $color-error-bg;
+  border-color: $color-error;
+  color: $color-error;
+}

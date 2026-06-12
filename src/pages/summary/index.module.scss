@@ -102,6 +102,18 @@
   margin-top: 4rpx;
 }
 
+.statsInfo {
+  margin-bottom: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  background-color: $color-bg-page;
+  border-radius: $radius-sm;
+}
+
+.statsInfoText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

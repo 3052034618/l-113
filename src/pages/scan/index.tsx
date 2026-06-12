@@ -4,20 +4,33 @@ import Taro, { useDidShow, usePullDownRefresh } from '@tarojs/taro';
 import classnames from 'classnames';
 import { useInspectionStore } from '@/store/inspection';
 import StatusTag from '@/components/StatusTag';
-import { formatTime, showToast, getNetworkStatus, setNetworkStatus } from '@/utils';
-import type { InspectionStatus } from '@/types/inspection';
+import { formatTime, showToast, isSameDay, getSyncStatusText, getNetworkStatus, setNetworkStatus } from '@/utils';
+import type { InspectionStatus, ScanRecord, SyncStatus } from '@/types/inspection';
 import styles from './index.module.scss';
 
-type FilterType = 'all' | 'normal' | 'abnormal' | 'missing' | 'disabled' | 'offline';
+type FilterType = 'all' | 'normal' | 'abnormal' | 'missing' | 'disabled' | 'pending' | 'failed';
 
 const ScanPage: React.FC = () => {
-  const { scanRecords, syncOfflineRecords, addScanRecord, routes, currentRouteId, addFaultReport, maintainers } = useInspectionStore();
+  const {
+    scanRecords,
+    syncOfflineRecords,
+    addScanRecord,
+    routes,
+    currentRouteId,
+    addFaultReport,
+    maintainers,
+    isOnline,
+    setNetworkMode,
+    getScanRecordById,
+    getTodayStats
+  } = useInspectionStore();
+
   const [filter, setFilter] = useState<FilterType>('all');
-  const [isOnline, setIsOnline] = useState<boolean>(getNetworkStatus() === 'online');
+  const [networkStatus, setNetworkStatus] = useState<boolean>(isOnline);
 
   useDidShow(() => {
     console.log('[Scan] 页面显示');
-    setIsOnline(getNetworkStatus() === 'online');
+    setNetworkStatus(getNetworkStatus() === 'online');
   });
 
   usePullDownRefresh(() => {
@@ -26,19 +39,23 @@ const ScanPage: React.FC = () => {
     }, 1000);
   });
 
-  const offlineCount = useMemo(() => {
-    return scanRecords.filter(r => r.isOffline && !r.synced).length;
+  const pendingCount = useMemo(() => {
+    return scanRecords.filter(r => r.syncStatus === 'pending').length;
+  }, [scanRecords]);
+
+  const failedCount = useMemo(() => {
+    return scanRecords.filter(r => r.syncStatus === 'failed').length;
   }, [scanRecords]);
 
   const todayRecords = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    return scanRecords.filter(r => r.scanTime.slice(0, 10) === today);
+    return scanRecords.filter(r => isSameDay(r.scanTime, new Date()));
   }, [scanRecords]);
 
   const filteredRecords = useMemo(() => {
     const records = todayRecords;
     if (filter === 'all') return records;
-    if (filter === 'offline') return records.filter(r => r.isOffline);
+    if (filter === 'pending') return records.filter(r => r.syncStatus === 'pending');
+    if (filter === 'failed') return records.filter(r => r.syncStatus === 'failed');
     return records.filter(r => r.status === filter);
   }, [todayRecords, filter]);
 
@@ -46,11 +63,34 @@ const ScanPage: React.FC = () => {
     return routes.find(r => r.id === currentRouteId) || null;
   }, [routes, currentRouteId]);
 
+  const todayStats = getTodayStats();
+
   const toggleNetwork = () => {
-    const newStatus = isOnline ? 'offline' : 'online';
-    setNetworkStatus(newStatus);
-    setIsOnline(!isOnline);
-    showToast(isOnline ? '已切换到离线模式' : '已切换到在线模式', 'none');
+    const newOnline = !networkStatus;
+    setNetworkMode(newOnline);
+    setNetworkStatus(newOnline);
+  };
+
+  const handleReportFault = (record: ScanRecord) => {
+    const params = new URLSearchParams({
+      deviceId: record.deviceId,
+      assetCode: record.assetCode,
+      deviceName: record.deviceName,
+      pointId: record.pointId,
+      pointName: record.pointName,
+      description: record.remark || `${record.deviceName} 巡检发现异常`,
+      photos: record.photos.join(','),
+      scanRecordId: record.id
+    });
+
+    if (record.faultReportId) {
+      showToast('已关联故障单，请在故障上报页查看', 'none');
+      return;
+    }
+
+    Taro.navigateTo({
+      url: `/pages/fault/index?${params.toString()}`
+    });
   };
 
   const handleScan = async () => {
@@ -124,10 +164,10 @@ const ScanPage: React.FC = () => {
             status: selectedStatus,
             remark,
             photos,
-            isOffline: !isOnline
+            isOffline: !networkStatus
           });
 
-          if (selectedStatus === 'abnormal' && isOnline) {
+          if (selectedStatus === 'abnormal' && networkStatus) {
             Taro.showModal({
               title: '是否上报故障？',
               content: '检测到异常状态，是否立即上报故障单？',
@@ -135,17 +175,18 @@ const ScanPage: React.FC = () => {
               cancelText: '暂不上报',
               success: (modalRes) => {
                 if (modalRes.confirm) {
-                  addFaultReport({
+                  const params = new URLSearchParams({
                     deviceId: matchedDevice!.id,
                     assetCode: matchedDevice!.assetCode,
                     deviceName: matchedDevice!.name,
                     pointId: matchedPoint!.id,
                     pointName: matchedPoint!.name,
                     description: remark || `${matchedDevice!.name} 巡检发现异常`,
-                    urgency: 'medium',
-                    photos,
-                    assigneeId: maintainers[0]?.id,
-                    assigneeName: maintainers[0]?.name
+                    photos: photos.join(','),
+                    urgency: 'medium'
+                  });
+                  Taro.navigateTo({
+                    url: `/pages/fault/index?${params.toString()}`
                   });
                 }
               }
@@ -160,9 +201,28 @@ const ScanPage: React.FC = () => {
   };
 
   const handleSync = () => {
-    const count = syncOfflineRecords();
-    if (count > 0) {
-      setIsOnline(true);
+    const result = syncOfflineRecords();
+    if (result.success > 0) {
+      setNetworkStatus(true);
+      showToast(`同步成功 ${result.success} 条${result.failed > 0 ? `，失败 ${result.failed} 条` : ''}`, result.failed > 0 ? 'error' : 'success');
+    } else if (result.failed > 0) {
+      showToast(`同步失败 ${result.failed} 条`, 'error');
+    } else {
+      showToast('暂无待同步记录', 'none');
+    }
+  };
+
+  const handleRetrySync = (record: ScanRecord) => {
+    if (record.syncStatus !== 'failed') return;
+    showToast('模拟重试同步成功', 'success');
+  };
+
+  const getSyncStatusColor = (status: SyncStatus) => {
+    switch (status) {
+      case 'synced': return '#00b42a';
+      case 'pending': return '#ff7d00';
+      case 'failed': return '#f53f3f';
+      default: return '#86909c';
     }
   };
 
@@ -172,15 +232,21 @@ const ScanPage: React.FC = () => {
     { key: 'abnormal', label: '异常' },
     { key: 'missing', label: '缺失' },
     { key: 'disabled', label: '停用' },
-    { key: 'offline', label: '待同步' }
+    { key: 'pending', label: '待上传', count: pendingCount },
+    { key: 'failed', label: '同步失败', count: failedCount }
   ];
 
   return (
     <ScrollView scrollY className={styles.page}>
       <View className={styles.scanArea}>
-        <View className={classnames(styles.networkBadge, isOnline ? styles.online : styles.offline)} onClick={toggleNetwork}>
+        <View className={classnames(styles.networkBadge, networkStatus ? styles.online : styles.offline)} onClick={toggleNetwork}>
           <View className={styles.networkDot} />
-          <Text className={styles.networkText}>{isOnline ? '在线' : '离线'}</Text>
+          <Text className={styles.networkText}>{networkStatus ? '在线' : '离线'}</Text>
+        </View>
+
+        <View className={styles.statsBar}>
+          <Text className={styles.statsItem}>今日已检：{todayStats.checkedDevices} 台</Text>
+          <Text className={styles.statsItem}>异常：{todayStats.abnormalCount} 台</Text>
         </View>
 
         <View className={styles.scanBtn} onClick={handleScan}>
@@ -192,18 +258,25 @@ const ScanPage: React.FC = () => {
         </Text>
       </View>
 
-      {offlineCount > 0 && (
+      {pendingCount > 0 && (
         <View className={styles.offlineBar}>
           <View className={styles.offlineInfo}>
             <Text className={styles.offlineIcon}>📡</Text>
             <View>
-              <Text className={styles.offlineText}>有 {offlineCount} 条记录待同步</Text>
+              <Text className={styles.offlineText}>有 {pendingCount} 条记录待上传</Text>
               <Text className={styles.offlineCount}>连接网络后点击同步按钮上传</Text>
             </View>
           </View>
           <View className={styles.syncBtn} onClick={handleSync}>
             立即同步
           </View>
+        </View>
+      )}
+
+      {failedCount > 0 && (
+        <View className={styles.failedBar}>
+          <Text className={styles.failedIcon}>⚠️</Text>
+          <Text className={styles.failedText}>有 {failedCount} 条记录同步失败，点击记录可重试</Text>
         </View>
       )}
 
@@ -216,7 +289,8 @@ const ScanPage: React.FC = () => {
         <ScrollView scrollX className={styles.filterTabs}>
           {filterOptions.map(opt => {
             const count = opt.key === 'all' ? todayRecords.length
-              : opt.key === 'offline' ? offlineCount
+              : opt.key === 'pending' ? pendingCount
+              : opt.key === 'failed' ? failedCount
               : todayRecords.filter(r => r.status === opt.key).length;
             return (
               <View
@@ -238,49 +312,86 @@ const ScanPage: React.FC = () => {
             <Text className={styles.emptyHint}>点击上方按钮开始巡检</Text>
           </View>
         ) : (
-          filteredRecords.map(record => (
-            <View key={record.id} className={styles.recordItem}>
-              <View className={styles.recordHeader}>
-                <Text className={styles.recordDevice}>{record.deviceName}</Text>
-                <View className={styles.recordTags}>
-                  {record.isOffline && !record.synced && (
-                    <View className={styles.recordOffline}>待同步</View>
+          filteredRecords.map(record => {
+            const syncStatusText = getSyncStatusText(record.syncStatus);
+            const syncStatusColor = getSyncStatusColor(record.syncStatus);
+
+            return (
+              <View key={record.id} className={classnames(styles.recordItem, record.syncStatus === 'failed' && styles.recordItemFailed)}>
+                <View className={styles.recordHeader}>
+                  <Text className={styles.recordDevice}>{record.deviceName}</Text>
+                  <View className={styles.recordTags}>
+                    {record.syncStatus !== 'synced' && (
+                      <View
+                        className={classnames(
+                          styles.syncTag,
+                          record.syncStatus === 'failed' ? styles.syncTagFailed : styles.syncTagPending
+                        )}
+                        onClick={() => record.syncStatus === 'failed' && handleRetrySync(record)}
+                      >
+                        {syncStatusText}
+                        {record.syncStatus === 'failed' && ' · 点击重试'}
+                      </View>
+                    )}
+                    {record.syncStatus === 'synced' && (
+                      <View className={styles.recordSynced}>已提交</View>
+                    )}
+                    <StatusTag type="inspection" status={record.status} />
+                  </View>
+                </View>
+
+                <View className={styles.recordBody}>
+                  <Text className={styles.recordMeta}>资产编号：{record.assetCode}</Text>
+                  <Text className={styles.recordMeta}>{record.pointName}</Text>
+                  <Text className={styles.recordMeta}>
+                    {formatTime(record.scanTime, 'HH:mm')} · {record.inspectorName} · {record.shift}
+                  </Text>
+
+                  {record.syncStatus === 'synced' && record.syncedAt && (
+                    <Text className={styles.recordMeta} style={{ color: '#00b42a' }}>
+                      ✓ 同步于 {formatTime(record.syncedAt, 'HH:mm')}
+                    </Text>
                   )}
-                  {record.synced && !record.isOffline && (
-                    <View className={styles.recordSynced}>已提交</View>
+
+                  {record.syncStatus === 'failed' && record.syncError && (
+                    <Text className={styles.recordMeta} style={{ color: '#f53f3f' }}>
+                      ✗ 失败原因：{record.syncError}
+                    </Text>
                   )}
-                  <StatusTag type="inspection" status={record.status} />
+
+                  {record.remark && (
+                    <Text className={styles.recordRemark}>备注：{record.remark}</Text>
+                  )}
+
+                  {record.photos.length > 0 && (
+                    <View className={styles.recordPhotos}>
+                      {record.photos.map((photo, idx) => (
+                        <Image
+                          key={idx}
+                          src={photo}
+                          mode="aspectFill"
+                          className={styles.recordPhoto}
+                        />
+                      ))}
+                    </View>
+                  )}
+
+                  {record.faultReportId && (
+                    <View className={styles.faultLinked}>
+                      <Text className={styles.faultLinkedIcon}>🔗</Text>
+                      <Text className={styles.faultLinkedText}>已关联故障单 #{record.faultReportId.slice(-6)}</Text>
+                    </View>
+                  )}
+
+                  {record.status === 'abnormal' && record.syncStatus === 'synced' && !record.faultReportId && (
+                    <View className={styles.reportBtn} onClick={() => handleReportFault(record)}>
+                      <Text className={styles.reportBtnText}>+ 上报故障</Text>
+                    </View>
+                  )}
                 </View>
               </View>
-              <View className={styles.recordBody}>
-                <Text className={styles.recordMeta}>资产编号：{record.assetCode}</Text>
-                <Text className={styles.recordMeta}>{record.pointName}</Text>
-                <Text className={styles.recordMeta}>
-                  {formatTime(record.scanTime, 'HH:mm')} · {record.inspectorName}
-                </Text>
-                {record.remark && (
-                  <Text className={styles.recordRemark}>备注：{record.remark}</Text>
-                )}
-                {record.photos.length > 0 && (
-                  <View className={styles.recordPhotos}>
-                    {record.photos.map((photo, idx) => (
-                      <Image
-                        key={idx}
-                        src={photo}
-                        mode="aspectFill"
-                        className={styles.recordPhoto}
-                      />
-                    ))}
-                  </View>
-                )}
-                {record.status === 'abnormal' && (
-                  <View className={styles.reportBtn}>
-                    <Text className={styles.reportBtnText}>+ 上报故障</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          ))
+            );
+          })
         )}
       </View>
     </ScrollView>

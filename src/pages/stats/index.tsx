@@ -5,12 +5,14 @@ import classnames from 'classnames';
 import { useInspectionStore } from '@/store/inspection';
 import StatCard from '@/components/StatCard';
 import ProgressBar from '@/components/ProgressBar';
-import { formatDate, getDateList, isFaultTimeout, formatTime } from '@/utils';
+import { formatDate, getDateList, isFaultTimeout, formatTime, getShiftList, isSameShift } from '@/utils';
+import type { ShiftType } from '@/types/inspection';
 import styles from './index.module.scss';
 
 const StatsPage: React.FC = () => {
-  const { user, getStatsByDate, faultReports, routes, scanRecords } = useInspectionStore();
+  const { user, getStatsByDateAndShift, faultReports, routes, scanRecords, getCurrentShift } = useInspectionStore();
   const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
+  const [selectedShift, setSelectedShift] = useState<ShiftType>(getCurrentShift());
 
   useDidShow(() => {
     console.log('[Stats] 页面显示');
@@ -23,25 +25,26 @@ const StatsPage: React.FC = () => {
   });
 
   const dateList = useMemo(() => getDateList(7), []);
+  const shiftList = useMemo(() => getShiftList(), []);
 
   const currentStats = useMemo(() => {
-    return getStatsByDate(selectedDate);
-  }, [selectedDate, getStatsByDate]);
+    return getStatsByDateAndShift(selectedDate, selectedShift);
+  }, [selectedDate, selectedShift, getStatsByDateAndShift]);
 
   const timeoutFaults = useMemo(() => {
     return faultReports.filter(f => {
       if (f.rectifyStatus === 'completed') return false;
-      const reportDate = f.reportTime.slice(0, 10);
-      return reportDate <= selectedDate && isFaultTimeout(f);
-    }).sort((a, b) => new Date(a.reportTime).getTime() - new Date(b.reportTime).getTime());
-  }, [faultReports, selectedDate]);
+      const reportDate = f.createdAt.slice(0, 10);
+      return reportDate <= selectedDate && isFaultTimeout(f) && f.shift === selectedShift;
+    }).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }, [faultReports, selectedDate, selectedShift]);
 
   const historyStats = useMemo(() => {
-    return dateList.map(date => getStatsByDate(date));
-  }, [dateList, getStatsByDate]);
+    return dateList.map(date => getStatsByDateAndShift(date, selectedShift));
+  }, [dateList, selectedShift, getStatsByDateAndShift]);
 
   const handleGenerateSummary = () => {
-    Taro.navigateTo({ url: '/pages/summary/index' });
+    Taro.navigateTo({ url: `/pages/summary/index?shift=${selectedShift}` });
   };
 
   const deviceRate = currentStats.totalDevices > 0
@@ -51,6 +54,12 @@ const StatsPage: React.FC = () => {
   const faultRate = currentStats.faultCount > 0
     ? Math.round((currentStats.completedFaultCount / currentStats.faultCount) * 100)
     : 100;
+
+  const shiftColors: Record<ShiftType, string> = {
+    '早班': '#1677ff',
+    '中班': '#722ed1',
+    '晚班': '#f53f3f'
+  };
 
   return (
     <ScrollView scrollY className={styles.page}>
@@ -80,6 +89,23 @@ const StatsPage: React.FC = () => {
             </Text>
           </View>
 
+          <View className={styles.shiftTabs}>
+            {shiftList.map(shift => (
+              <View
+                key={shift}
+                className={classnames(styles.shiftTab, selectedShift === shift && styles.shiftTabActive)}
+                style={{
+                  backgroundColor: selectedShift === shift ? `${shiftColors[shift]}15` : undefined,
+                  color: selectedShift === shift ? shiftColors[shift] : undefined,
+                  borderColor: selectedShift === shift ? shiftColors[shift] : undefined
+                }}
+                onClick={() => setSelectedShift(shift)}
+              >
+                {shift}
+              </View>
+            ))}
+          </View>
+
           <View className={styles.dateTabs}>
             {dateList.map(date => (
               <View
@@ -90,6 +116,12 @@ const StatsPage: React.FC = () => {
                 {date.slice(5)}
               </View>
             ))}
+          </View>
+
+          <View className={styles.statsSummary}>
+            <Text className={styles.statsSummaryText}>
+              当前统计：<Text style={{ color: shiftColors[selectedShift], fontWeight: 600 }}>{selectedShift}</Text> · {selectedDate}
+            </Text>
           </View>
 
           <View className={styles.statsGrid}>
@@ -158,21 +190,21 @@ const StatsPage: React.FC = () => {
         {timeoutFaults.length === 0 ? (
           <View className={styles.emptyState}>
             <Text className={styles.emptyIcon}>✅</Text>
-            <Text className={styles.emptyText}>暂无超时项</Text>
+            <Text className={styles.emptyText}>暂无{selectedShift}超时项</Text>
           </View>
         ) : (
           timeoutFaults.map(fault => (
             <View key={fault.id} className={styles.timeoutCard}>
               <Text className={styles.timeoutTitle}>{fault.deviceName}</Text>
               <Text className={styles.timeoutMeta}>
-                {fault.pointName} · 上报于 {formatTime(fault.reportTime)}
+                {fault.pointName} · {fault.shift} · 上报于 {formatTime(fault.createdAt)}
               </Text>
               <Text className={styles.timeoutDesc}>{fault.description}</Text>
             </View>
           ))
         )}
 
-        <Text className={styles.sectionTitle}>📅 历史数据</Text>
+        <Text className={styles.sectionTitle}>📅 历史数据（{selectedShift}）</Text>
         {historyStats.map(stat => (
           <View key={stat.date} className={styles.historyItem}>
             <View>

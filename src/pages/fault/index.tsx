@@ -5,17 +5,36 @@ import classnames from 'classnames';
 import { useInspectionStore } from '@/store/inspection';
 import StatCard from '@/components/StatCard';
 import FaultCard from '@/components/FaultCard';
-import { showToast, isFaultTimeout } from '@/utils';
-import type { UrgencyLevel, RectifyStatus } from '@/types/inspection';
+import { showToast, isFaultTimeout, formatTime, getTimelineActionText, getUrgencyText } from '@/utils';
+import type { UrgencyLevel, RectifyStatus, FaultReport } from '@/types/inspection';
 import styles from './index.module.scss';
 
 type FilterType = 'all' | RectifyStatus;
 
 const FaultPage: React.FC = () => {
-  const { faultReports, maintainers, addFaultReport, getTodayStats, getDeviceById, getPointById } = useInspectionStore();
+  const {
+    faultReports,
+    maintainers,
+    addFaultReport,
+    getTodayStats,
+    getDeviceById,
+    getPointById,
+    acceptFault,
+    rejectFault,
+    completeFault,
+    recheckFault,
+    currentUser,
+    linkScanRecordToFault
+  } = useInspectionStore();
   const router = useRouter();
   const [filter, setFilter] = useState<FilterType>('all');
   const [showModal, setShowModal] = useState(false);
+  const [showDetail, setShowDetail] = useState<FaultReport | null>(null);
+  const [rejectRemark, setRejectRemark] = useState('');
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [recheckResult, setRecheckResult] = useState<'pass' | 'fail'>('pass');
+  const [recheckRemark, setRecheckRemark] = useState('');
+  const [showRecheckModal, setShowRecheckModal] = useState(false);
 
   const [deviceName, setDeviceName] = useState('');
   const [assetCode, setAssetCode] = useState('');
@@ -28,6 +47,7 @@ const FaultPage: React.FC = () => {
   const [assigneeId, setAssigneeId] = useState<string>('');
   const [assigneeName, setAssigneeName] = useState('');
   const [recheckRequired, setRecheckRequired] = useState(true);
+  const [scanRecordId, setScanRecordId] = useState<string>('');
 
   const todayStats = getTodayStats();
 
@@ -35,14 +55,21 @@ const FaultPage: React.FC = () => {
     console.log('[Fault] 页面显示');
     const prefillDeviceId = router.params.deviceId as string;
     const prefillPointId = router.params.pointId as string;
+    const prefillDescription = router.params.description as string;
+    const prefillPhotos = router.params.photos as string;
+    const prefillScanRecordId = router.params.scanRecordId as string;
 
-    if (prefillDeviceId || prefillPointId) {
+    if (prefillDeviceId || prefillPointId || prefillDescription) {
       if (prefillDeviceId) {
         const device = getDeviceById(prefillDeviceId);
         if (device) {
           setDeviceId(device.id);
           setDeviceName(device.name);
           setAssetCode(device.assetCode);
+        } else {
+          setDeviceId(prefillDeviceId);
+          setDeviceName(router.params.deviceName as string || '');
+          setAssetCode(router.params.assetCode as string || '');
         }
       }
       if (prefillPointId) {
@@ -50,7 +77,19 @@ const FaultPage: React.FC = () => {
         if (result) {
           setPointId(result.point.id);
           setPointName(result.point.name);
+        } else {
+          setPointId(prefillPointId);
+          setPointName(router.params.pointName as string || '');
         }
+      }
+      if (prefillDescription) {
+        setDescription(decodeURIComponent(prefillDescription));
+      }
+      if (prefillPhotos) {
+        setPhotos(prefillPhotos.split(',').filter(Boolean));
+      }
+      if (prefillScanRecordId) {
+        setScanRecordId(prefillScanRecordId);
       }
       setShowModal(true);
     }
@@ -130,7 +169,7 @@ const FaultPage: React.FC = () => {
       return;
     }
 
-    addFaultReport({
+    const faultId = addFaultReport({
       deviceId: deviceId || `DEV-${Date.now()}`,
       assetCode: assetCode || '未记录',
       deviceName: deviceName.trim(),
@@ -141,11 +180,82 @@ const FaultPage: React.FC = () => {
       photos,
       assigneeId: assigneeId || undefined,
       assigneeName: assigneeName || undefined,
-      recheckRequired
+      recheckRequired,
+      scanRecordId: scanRecordId || undefined
     });
+
+    if (scanRecordId && faultId) {
+      linkScanRecordToFault(scanRecordId, faultId);
+    }
 
     setShowModal(false);
     resetForm();
+    showToast('故障上报成功', 'success');
+  };
+
+  const handleAccept = () => {
+    if (!showDetail) return;
+    acceptFault(showDetail.id);
+    setShowDetail(null);
+    showToast('已接单', 'success');
+  };
+
+  const handleReject = () => {
+    if (!showDetail) return;
+    setShowRejectModal(true);
+  };
+
+  const confirmReject = () => {
+    if (!showDetail) return;
+    rejectFault(showDetail.id, rejectRemark || '无');
+    setShowRejectModal(false);
+    setRejectRemark('');
+    setShowDetail(null);
+    showToast('已退回', 'success');
+  };
+
+  const handleComplete = () => {
+    if (!showDetail) return;
+    Taro.showModal({
+      title: '确认整改完成？',
+      content: showDetail.recheckRequired ? '提交后将进入待复检状态' : '无需复检，提交后将直接完成',
+      success: (res) => {
+        if (res.confirm) {
+          completeFault(showDetail.id);
+          setShowDetail(null);
+          showToast(showDetail.recheckRequired ? '已提交复检' : '整改已完成', 'success');
+        }
+      }
+    });
+  };
+
+  const handleRecheck = () => {
+    if (!showDetail) return;
+    setShowRecheckModal(true);
+  };
+
+  const confirmRecheck = () => {
+    if (!showDetail) return;
+    recheckFault(showDetail.id, recheckResult, recheckRemark || '无');
+    setShowRecheckModal(false);
+    setRecheckRemark('');
+    setShowDetail(null);
+    showToast(recheckResult === 'pass' ? '复检通过' : '复检不通过', 'success');
+  };
+
+  const canAccept = showDetail?.assigneeId === currentUser?.id && showDetail?.rectifyStatus === 'pending';
+  const canReject = showDetail?.assigneeId === currentUser?.id && showDetail?.rectifyStatus === 'pending';
+  const canComplete = showDetail?.assigneeId === currentUser?.id && showDetail?.rectifyStatus === 'processing';
+  const canRecheck = showDetail?.recheckRequired && showDetail?.rectifyStatus === 'recheck';
+
+  const getFaultActionColor = (status: RectifyStatus) => {
+    switch (status) {
+      case 'pending': return '#ff7d00';
+      case 'processing': return '#1677ff';
+      case 'recheck': return '#722ed1';
+      case 'completed': return '#00b42a';
+      default: return '#86909c';
+    }
   };
 
   const handleSelectAssignee = (id: string, name: string) => {
@@ -220,7 +330,9 @@ const FaultPage: React.FC = () => {
                     <Text className={styles.groupCount}>{list.length}项</Text>
                   </View>
                   {list.map(fault => (
-                    <FaultCard key={fault.id} fault={fault} />
+                    <View key={fault.id} onClick={() => setShowDetail(fault)}>
+                      <FaultCard fault={fault} />
+                    </View>
                   ))}
                 </View>
               )
@@ -228,7 +340,9 @@ const FaultPage: React.FC = () => {
           </>
         ) : (
           filteredFaults.map(fault => (
-            <FaultCard key={fault.id} fault={fault} />
+            <View key={fault.id} onClick={() => setShowDetail(fault)}>
+              <FaultCard fault={fault} />
+            </View>
           ))
         )}
       </View>
@@ -386,6 +500,213 @@ const FaultPage: React.FC = () => {
               提交上报
             </View>
           </ScrollView>
+        </View>
+      )}
+
+      {showDetail && (
+        <View className={styles.modalMask} onClick={() => setShowDetail(null)}>
+          <ScrollView scrollY className={styles.modalContent} onClick={e => e.stopPropagation()}>
+            <View className={styles.modalHeader}>
+              <Text className={styles.modalTitle}>故障详情</Text>
+              <View className={styles.modalClose} onClick={() => setShowDetail(null)}>
+                ✕
+              </View>
+            </View>
+
+            <View className={styles.detailHeader}>
+              <View className={styles.detailStatus} style={{ backgroundColor: `${getFaultActionColor(showDetail.rectifyStatus)}15`, color: getFaultActionColor(showDetail.rectifyStatus) }}>
+                {showDetail.rectifyStatus === 'pending' ? '待处理' : showDetail.rectifyStatus === 'processing' ? '处理中' : showDetail.rectifyStatus === 'recheck' ? '待复检' : '已完成'}
+              </View>
+              <View className={styles.detailUrgency} style={{ backgroundColor: showDetail.urgency === 'high' ? '#f53f3f15' : showDetail.urgency === 'medium' ? '#ff7d0015' : '#86909c15', color: showDetail.urgency === 'high' ? '#f53f3f' : showDetail.urgency === 'medium' ? '#ff7d00' : '#86909c' }}>
+                {getUrgencyText(showDetail.urgency)}
+              </View>
+            </View>
+
+            <View className={styles.detailSection}>
+              <Text className={styles.detailSectionTitle}>基本信息</Text>
+              <View className={styles.detailRow}>
+                <Text className={styles.detailLabel}>设备名称</Text>
+                <Text className={styles.detailValue}>{showDetail.deviceName}</Text>
+              </View>
+              <View className={styles.detailRow}>
+                <Text className={styles.detailLabel}>资产编号</Text>
+                <Text className={styles.detailValue}>{showDetail.assetCode}</Text>
+              </View>
+              <View className={styles.detailRow}>
+                <Text className={styles.detailLabel}>所在点位</Text>
+                <Text className={styles.detailValue}>{showDetail.pointName}</Text>
+              </View>
+              <View className={styles.detailRow}>
+                <Text className={styles.detailLabel}>故障描述</Text>
+                <Text className={styles.detailValue}>{showDetail.description}</Text>
+              </View>
+              <View className={styles.detailRow}>
+                <Text className={styles.detailLabel}>指派给</Text>
+                <Text className={styles.detailValue}>{showDetail.assigneeName || '未指派'}</Text>
+              </View>
+              <View className={styles.detailRow}>
+                <Text className={styles.detailLabel}>复检要求</Text>
+                <Text className={styles.detailValue}>{showDetail.recheckRequired ? '需要复检' : '无需复检'}</Text>
+              </View>
+              <View className={styles.detailRow}>
+                <Text className={styles.detailLabel}>创建时间</Text>
+                <Text className={styles.detailValue}>{formatTime(showDetail.createdAt, 'MM-DD HH:mm')}</Text>
+              </View>
+              {showDetail.acceptedAt && (
+                <View className={styles.detailRow}>
+                  <Text className={styles.detailLabel}>接单时间</Text>
+                  <Text className={styles.detailValue}>{formatTime(showDetail.acceptedAt, 'MM-DD HH:mm')}</Text>
+                </View>
+              )}
+              {showDetail.completedAt && (
+                <View className={styles.detailRow}>
+                  <Text className={styles.detailLabel}>完成时间</Text>
+                  <Text className={styles.detailValue}>{formatTime(showDetail.completedAt, 'MM-DD HH:mm')}</Text>
+                </View>
+              )}
+              {showDetail.closedAt && (
+                <View className={styles.detailRow}>
+                  <Text className={styles.detailLabel}>关闭时间</Text>
+                  <Text className={styles.detailValue}>{formatTime(showDetail.closedAt, 'MM-DD HH:mm')}</Text>
+                </View>
+              )}
+            </View>
+
+            {showDetail.photos.length > 0 && (
+              <View className={styles.detailSection}>
+                <Text className={styles.detailSectionTitle}>现场照片</Text>
+                <View className={styles.detailPhotos}>
+                  {showDetail.photos.map((photo, idx) => (
+                    <Image key={idx} src={photo} mode="aspectFill" className={styles.detailPhoto} />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            <View className={styles.detailSection}>
+              <Text className={styles.detailSectionTitle}>处理时间线</Text>
+              <View className={styles.timeline}>
+                {showDetail.timeline.map((item, idx) => (
+                  <View key={item.id} className={styles.timelineItem}>
+                    <View className={styles.timelineDot} />
+                    {idx < showDetail.timeline.length - 1 && <View className={styles.timelineLine} />}
+                    <View className={styles.timelineContent}>
+                      <View className={styles.timelineHeader}>
+                        <Text className={styles.timelineAction} style={{ color: item.action === 'rejected' ? '#f53f3f' : item.action === 'recheck_pass' ? '#00b42a' : item.action === 'recheck_fail' ? '#f53f3f' : '#1677ff' }}>
+                          {getTimelineActionText(item.action)}
+                        </Text>
+                        <Text className={styles.timelineTime}>{formatTime(item.time, 'MM-DD HH:mm')}</Text>
+                      </View>
+                      <Text className={styles.timelineOperator}>操作人：{item.operatorName}</Text>
+                      {item.remark && (
+                        <Text className={styles.timelineRemark}>{item.remark}</Text>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View className={styles.detailActions}>
+              {canAccept && (
+                <View className={classnames(styles.detailActionBtn, styles.detailActionBtnPrimary)} onClick={handleAccept}>
+                  接单
+                </View>
+              )}
+              {canReject && (
+                <View className={classnames(styles.detailActionBtn, styles.detailActionBtnDanger)} onClick={handleReject}>
+                  退回
+                </View>
+              )}
+              {canComplete && (
+                <View className={classnames(styles.detailActionBtn, styles.detailActionBtnPrimary)} onClick={handleComplete}>
+                  整改完成
+                </View>
+              )}
+              {canRecheck && (
+                <View className={classnames(styles.detailActionBtn, styles.detailActionBtnPrimary)} onClick={handleRecheck}>
+                  复检
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </View>
+      )}
+
+      {showRejectModal && (
+        <View className={styles.modalMask} onClick={() => setShowRejectModal(false)}>
+          <View className={styles.modalContentSmall} onClick={e => e.stopPropagation()}>
+            <View className={styles.modalHeader}>
+              <Text className={styles.modalTitle}>退回原因</Text>
+              <View className={styles.modalClose} onClick={() => setShowRejectModal(false)}>
+                ✕
+              </View>
+            </View>
+            <View className={styles.formGroup}>
+              <Text className={styles.formLabel}>请填写退回原因</Text>
+              <Textarea
+                className={styles.formTextarea}
+                placeholder="请输入退回原因"
+                value={rejectRemark}
+                onInput={(e) => setRejectRemark(e.detail.value)}
+              />
+            </View>
+            <View className={styles.modalActions}>
+              <View className={classnames(styles.modalActionBtn, styles.modalActionBtnCancel)} onClick={() => setShowRejectModal(false)}>
+                取消
+              </View>
+              <View className={classnames(styles.modalActionBtn, styles.modalActionBtnConfirm)} onClick={confirmReject}>
+                确认退回
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {showRecheckModal && (
+        <View className={styles.modalMask} onClick={() => setShowRecheckModal(false)}>
+          <View className={styles.modalContentSmall} onClick={e => e.stopPropagation()}>
+            <View className={styles.modalHeader}>
+              <Text className={styles.modalTitle}>复检确认</Text>
+              <View className={styles.modalClose} onClick={() => setShowRecheckModal(false)}>
+                ✕
+              </View>
+            </View>
+            <View className={styles.formGroup}>
+              <Text className={styles.formLabel}>复检结果</Text>
+              <View className={styles.recheckResultRow}>
+                <View
+                  className={classnames(styles.recheckResultBtn, recheckResult === 'pass' && styles.recheckResultBtnPass)}
+                  onClick={() => setRecheckResult('pass')}
+                >
+                  ✓ 通过
+                </View>
+                <View
+                  className={classnames(styles.recheckResultBtn, recheckResult === 'fail' && styles.recheckResultBtnFail)}
+                  onClick={() => setRecheckResult('fail')}
+                >
+                  ✗ 不通过
+                </View>
+              </View>
+            </View>
+            <View className={styles.formGroup}>
+              <Text className={styles.formLabel}>复检备注</Text>
+              <Textarea
+                className={styles.formTextarea}
+                placeholder="请输入复检备注（选填）"
+                value={recheckRemark}
+                onInput={(e) => setRecheckRemark(e.detail.value)}
+              />
+            </View>
+            <View className={styles.modalActions}>
+              <View className={classnames(styles.modalActionBtn, styles.modalActionBtnCancel)} onClick={() => setShowRecheckModal(false)}>
+                取消
+              </View>
+              <View className={classnames(styles.modalActionBtn, styles.modalActionBtnConfirm)} onClick={confirmRecheck}>
+                确认提交
+              </View>
+            </View>
+          </View>
         </View>
       )}
     </ScrollView>

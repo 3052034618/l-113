@@ -50,6 +50,83 @@
   color: rgba(255, 255, 255, 0.8);
 }
 
+.statsBar {
+  display: flex;
+  gap: $spacing-lg;
+  margin-bottom: $spacing-md;
+}
+
+.statsItem {
+  font-size: $font-size-xs;
+  color: rgba(255, 255, 255, 0.9);
+  padding: 4rpx 16rpx;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: $radius-button;
+}
+
+.failedBar {
+  margin: $spacing-md $page-padding 0;
+  padding: $spacing-md;
+  background-color: $color-error-bg;
+  border-radius: $radius-md;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.failedIcon {
+  font-size: 32rpx;
+}
+
+.failedText {
+  font-size: $font-size-sm;
+  color: $color-error;
+  font-weight: $font-weight-medium;
+  flex: 1;
+}
+
+.syncTag {
+  padding: 4rpx 12rpx;
+  border-radius: $radius-xs;
+  font-size: $font-size-xs;
+  margin-right: $spacing-xs;
+}
+
+.syncTagPending {
+  background-color: $color-warning-bg;
+  color: $color-warning;
+}
+
+.syncTagFailed {
+  background-color: $color-error-bg;
+  color: $color-error;
+}
+
+.recordItemFailed {
+  border-left: 6rpx solid $color-error;
+}
+
+.faultLinked {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-top: $spacing-sm;
+  padding: 8rpx 12rpx;
+  background-color: rgba(22, 119, 255, 0.1);
+  border-radius: $radius-sm;
+  align-self: flex-start;
+}
+
+.faultLinkedIcon {
+  font-size: 24rpx;
+}
+
+.faultLinkedText {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
 .offlineBar {
   margin: $spacing-md $page-padding 0;
   padding: $spacing-md;

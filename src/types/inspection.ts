@@ -2,7 +2,58 @@ export type InspectionStatus = 'normal' | 'abnormal' | 'missing' | 'disabled';
 
 export type UrgencyLevel = 'high' | 'medium' | 'low';
 
-export type RectifyStatus = 'pending' | 'processing' | 'completed' | 'recheck';
+export type RectifyStatus = 'pending' | 'assigned' | 'accepted' | 'rejected' | 'processing' | 'completed' | 'recheck' | 'closed';
+
+export type SyncStatus = 'pending' | 'syncing' | 'synced' | 'failed';
+
+export type ShiftType = '早班' | '中班' | '晚班';
+
+export type PointOperationType = 'assign' | 'transfer' | 'assist' | 'complete';
+
+export type TimelineAction = 'create' | 'assign' | 'accept' | 'reject' | 'start' | 'progress' | 'complete' | 'recheck_request' | 'recheck_pass' | 'recheck_fail' | 'close';
+
+export interface Team {
+  id: string;
+  name: string;
+  leaderId: string;
+  leaderName: string;
+  memberIds: string[];
+  memberNames: string[];
+}
+
+export interface PointAssignment {
+  pointId: string;
+  assigneeId: string;
+  assigneeName: string;
+  assignTime: string;
+  startTime?: string;
+  endTime?: string;
+  assistMemberIds?: string[];
+  assistMemberNames?: string[];
+}
+
+export interface PointOperationLog {
+  id: string;
+  pointId: string;
+  routeId: string;
+  operation: PointOperationType;
+  operatorId: string;
+  operatorName: string;
+  targetUserId?: string;
+  targetUserName?: string;
+  remark?: string;
+  time: string;
+}
+
+export interface FaultTimelineItem {
+  id: string;
+  action: TimelineAction;
+  operatorId: string;
+  operatorName: string;
+  time: string;
+  remark?: string;
+  progress?: number;
+}
 
 export interface AssetDevice {
   id: string;
@@ -26,20 +77,35 @@ export interface InspectionPoint {
   totalDevices: number;
   checkedDevices: number;
   order: number;
+  assignment?: PointAssignment;
+}
+
+export interface RouteMemberResult {
+  userId: string;
+  userName: string;
+  checkedDevices: number;
+  abnormalDevices: number;
+  durationMinutes: number;
+  pointIds: string[];
 }
 
 export interface InspectionRoute {
   id: string;
   name: string;
   date: string;
+  shift: ShiftType;
+  teamId?: string;
+  teamName?: string;
   inspectorId: string;
   inspectorName: string;
+  memberAssignments?: PointAssignment[];
   points: InspectionPoint[];
   totalPoints: number;
   checkedPoints: number;
   status: 'pending' | 'in_progress' | 'completed';
   startTime?: string;
   endTime?: string;
+  memberResults?: RouteMemberResult[];
 }
 
 export interface ScanRecord {
@@ -53,10 +119,14 @@ export interface ScanRecord {
   remark?: string;
   photos: string[];
   scanTime: string;
+  shift: ShiftType;
   inspectorId: string;
   inspectorName: string;
   isOffline: boolean;
-  synced: boolean;
+  syncStatus: SyncStatus;
+  syncError?: string;
+  syncedAt?: string;
+  faultReportId?: string;
 }
 
 export interface FaultReport {
@@ -72,8 +142,13 @@ export interface FaultReport {
   reporterId: string;
   reporterName: string;
   reportTime: string;
+  shift: ShiftType;
   assigneeId?: string;
   assigneeName?: string;
+  assignTime?: string;
+  acceptedAt?: string;
+  rejectedAt?: string;
+  rejectReason?: string;
   rectifyStatus: RectifyStatus;
   rectifyProgress: number;
   rectifyRemark?: string;
@@ -81,10 +156,14 @@ export interface FaultReport {
   recheckRequired: boolean;
   recheckTime?: string;
   recheckResult?: 'pass' | 'fail';
+  recheckRemark?: string;
+  closedAt?: string;
+  timeline: FaultTimelineItem[];
 }
 
 export interface DailyStats {
   date: string;
+  shift: ShiftType;
   totalPoints: number;
   checkedPoints: number;
   totalDevices: number;
@@ -105,12 +184,13 @@ export interface UserProfile {
   department: string;
   role: 'inspector' | 'maintainer' | 'admin';
   phone: string;
+  teamId?: string;
 }
 
 export interface ShiftSummary {
   id: string;
   date: string;
-  shift: '早班' | '中班' | '晚班';
+  shift: ShiftType;
   inspectorId: string;
   inspectorName: string;
   stats: DailyStats;

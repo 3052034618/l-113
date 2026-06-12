@@ -1,25 +1,29 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, Textarea } from '@tarojs/components';
-import Taro, { useDidShow } from '@tarojs/taro';
+import Taro, { useDidShow, useRouter } from '@tarojs/taro';
 import { useInspectionStore } from '@/store/inspection';
-import { formatTime, getTodayStr, showToast, getRectifyStatusText, isFaultTimeout } from '@/utils';
+import { formatTime, getTodayStr, showToast, getRectifyStatusText, isFaultTimeout, getShiftList, formatDate } from '@/utils';
 import StatusTag from '@/components/StatusTag';
+import type { ShiftType } from '@/types/inspection';
 import styles from './index.module.scss';
 
 const SummaryPage: React.FC = () => {
-  const { user, getTodayStats, faultReports } = useInspectionStore();
-  const [shift, setShift] = useState<'早班' | '中班' | '晚班'>('早班');
+  const { user, getStatsByDateAndShift, faultReports, getCurrentShift } = useInspectionStore();
+  const router = useRouter();
+  const initialShift = (router.params.shift as ShiftType) || getCurrentShift();
+  const [shift, setShift] = useState<ShiftType>(initialShift);
   const [remarks, setRemarks] = useState('');
+  const selectedDate = formatDate(new Date());
 
-  const todayStats = getTodayStats();
+  const todayStats = getStatsByDateAndShift(selectedDate, shift);
 
   const pendingFaults = useMemo(() => {
-    return faultReports.filter(f => f.rectifyStatus !== 'completed');
-  }, [faultReports]);
+    return faultReports.filter(f => f.rectifyStatus !== 'completed' && f.shift === shift);
+  }, [faultReports, shift]);
 
   const timeoutFaults = useMemo(() => {
-    return faultReports.filter(f => isFaultTimeout(f));
-  }, [faultReports]);
+    return faultReports.filter(f => isFaultTimeout(f) && f.shift === shift);
+  }, [faultReports, shift]);
 
   useDidShow(() => {
     console.log('[Summary] 页面显示');
@@ -46,6 +50,7 @@ const SummaryPage: React.FC = () => {
 生成时间：${formatTime(new Date())}
 巡检员：${user.name}（${user.department}）
 日期：${getTodayStr()}
+班次：${shift}
 
 ━━━━━━━━━━━━━━━━━━
 一、巡检数据统计
@@ -69,7 +74,7 @@ const SummaryPage: React.FC = () => {
 超时项：${todayStats.timeoutCount} 项
 
 ━━━━━━━━━━━━━━━━━━
-三、待办事项
+三、待办事项（${shift}）
 ━━━━━━━━━━━━━━━━━━
 ${pendingText}
 
@@ -87,6 +92,12 @@ ${remarks || '无'}
         showToast('摘要已复制到剪贴板', 'success');
       }
     });
+  };
+
+  const shiftColors: Record<ShiftType, string> = {
+    '早班': '#1677ff',
+    '中班': '#722ed1',
+    '晚班': '#f53f3f'
   };
 
   return (
@@ -109,14 +120,14 @@ ${remarks || '无'}
             </View>
             <View>
               <Text className={styles.inspectorName}>{user.name}</Text>
-              <Text className={styles.inspectorDept}>{user.department} · {shift}</Text>
+              <Text className={styles.inspectorDept}>{user.department} · <Text style={{ color: shiftColors[shift], fontWeight: 600 }}>{shift}</Text></Text>
             </View>
           </View>
 
           <View className={styles.formGroup}>
             <Text className={styles.formLabel}>班次选择</Text>
             <View style={{ display: 'flex', gap: 16 }}>
-              {(['早班', '中班', '晚班'] as const).map(s => (
+              {getShiftList().map(s => (
                 <View
                   key={s}
                   style={{
@@ -128,7 +139,7 @@ ${remarks || '无'}
                     justifyContent: 'center',
                     fontSize: 26,
                     fontWeight: 500,
-                    backgroundColor: shift === s ? '#165dff' : '#f2f3f5',
+                    backgroundColor: shift === s ? shiftColors[s] : '#f2f3f5',
                     color: shift === s ? '#ffffff' : '#4e5969'
                   }}
                   onClick={() => setShift(s)}
@@ -137,6 +148,12 @@ ${remarks || '无'}
                 </View>
               ))}
             </View>
+          </View>
+
+          <View className={styles.statsInfo}>
+            <Text className={styles.statsInfoText}>
+              当前统计：<Text style={{ color: shiftColors[shift], fontWeight: 600 }}>{shift}</Text> · {selectedDate}
+            </Text>
           </View>
 
           <View className={styles.statsGrid}>
@@ -192,10 +209,10 @@ ${remarks || '无'}
             </Text>
           </View>
 
-          <Text className={styles.sectionTitle}>⚠️ 待交接事项（{pendingFaults.length}项）</Text>
+          <Text className={styles.sectionTitle}>⚠️ 待交接事项（{shift} · {pendingFaults.length}项）</Text>
           {pendingFaults.length === 0 ? (
             <View style={{ padding: 32, textAlign: 'center' }}>
-              <Text style={{ fontSize: 26, color: '#86909c' }}>暂无待交接事项</Text>
+              <Text style={{ fontSize: 26, color: '#86909c' }}>暂无{shift}待交接事项</Text>
             </View>
           ) : (
             pendingFaults.map(fault => (

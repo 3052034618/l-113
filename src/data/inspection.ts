@@ -4,19 +4,38 @@ import type {
   AssetDevice,
   ScanRecord,
   FaultReport,
-  DailyStats,
   UserProfile,
-  ShiftSummary
+  Team,
+  PointAssignment,
+  FaultTimelineItem,
+  ShiftType,
+  SyncStatus
 } from '@/types/inspection';
-import { getTodayStr } from '@/utils';
+import { getTodayStr, createTimelineItem } from '@/utils';
 
 export const mockUser: UserProfile = {
   id: 'U001',
   name: '张工',
   department: '物业运维部',
   role: 'inspector',
-  phone: '13800138000'
+  phone: '13800138000',
+  teamId: 'T001'
 };
+
+export const mockTeam: Team = {
+  id: 'T001',
+  name: '巡检一组',
+  leaderId: 'U001',
+  leaderName: '张工',
+  memberIds: ['U001', 'U005', 'U006'],
+  memberNames: ['张工', '刘工', '陈工']
+};
+
+export const mockTeamMembers: UserProfile[] = [
+  { id: 'U001', name: '张工', department: '物业运维部', role: 'inspector', phone: '13800138000', teamId: 'T001' },
+  { id: 'U005', name: '刘工', department: '物业运维部', role: 'inspector', phone: '13800138005', teamId: 'T001' },
+  { id: 'U006', name: '陈工', department: '物业运维部', role: 'inspector', phone: '13800138006', teamId: 'T001' }
+];
 
 const createDevices = (pointId: string, prefix: string, count: number, withCheckTime = false): AssetDevice[] => {
   const categories = ['服务器', '交换机', '空调', 'UPS', '监控摄像头', '投影仪', '门禁系统'];
@@ -30,21 +49,40 @@ const createDevices = (pointId: string, prefix: string, count: number, withCheck
     location: `A栋${pointId}区`,
     pointId,
     status: 'normal' as const,
-    lastCheckTime: withCheckTime ? '2026-06-11 14:30' : undefined
+    lastCheckTime: withCheckTime ? '2026-06-11T14:30:00.000Z' : undefined
   }));
 };
+
+const createAssignment = (pointId: string, assigneeId: string, assigneeName: string, startTime: string): PointAssignment => ({
+  pointId,
+  assigneeId,
+  assigneeName,
+  assignTime: '2026-06-12T08:00:00.000Z',
+  startTime
+});
+
+const shift = '早班' as ShiftType;
 
 export const mockRoutes: InspectionRoute[] = [
   {
     id: 'ROUTE-001',
     name: 'A栋日巡检路线',
     date: getTodayStr(),
+    shift,
+    teamId: 'T001',
+    teamName: '巡检一组',
     inspectorId: 'U001',
     inspectorName: '张工',
     totalPoints: 4,
     checkedPoints: 1,
     status: 'in_progress',
-    startTime: '2026-06-12 08:30',
+    startTime: '2026-06-12T08:30:00.000Z',
+    memberAssignments: [
+      createAssignment('P001', 'U001', '张工', '2026-06-12T08:30:00.000Z'),
+      createAssignment('P002', 'U005', '刘工', '2026-06-12T08:45:00.000Z'),
+      createAssignment('P003', 'U006', '陈工', '2026-06-12T09:00:00.000Z'),
+      createAssignment('P004', 'U001', '张工', '2026-06-12T09:15:00.000Z')
+    ],
     points: [
       {
         id: 'P001',
@@ -55,13 +93,14 @@ export const mockRoutes: InspectionRoute[] = [
         totalDevices: 8,
         checkedDevices: 3,
         order: 1,
+        assignment: createAssignment('P001', 'U001', '张工', '2026-06-12T08:30:00.000Z'),
         devices: (() => {
           const devs = createDevices('P001', 'A1', 8);
-          devs[0].lastCheckTime = '2026-06-12 08:45';
+          devs[0].lastCheckTime = '2026-06-12T08:45:00.000Z';
           devs[0].status = 'normal';
-          devs[2].lastCheckTime = '2026-06-12 08:52';
+          devs[2].lastCheckTime = '2026-06-12T08:52:00.000Z';
           devs[2].status = 'abnormal';
-          devs[4].lastCheckTime = '2026-06-12 08:58';
+          devs[4].lastCheckTime = '2026-06-12T08:58:00.000Z';
           devs[4].status = 'normal';
           return devs;
         })()
@@ -75,11 +114,12 @@ export const mockRoutes: InspectionRoute[] = [
         totalDevices: 6,
         checkedDevices: 2,
         order: 2,
+        assignment: createAssignment('P002', 'U005', '刘工', '2026-06-12T08:45:00.000Z'),
         devices: (() => {
           const devs = createDevices('P002', 'A3', 6);
-          devs[1].lastCheckTime = '2026-06-12 09:20';
+          devs[1].lastCheckTime = '2026-06-12T09:20:00.000Z';
           devs[1].status = 'normal';
-          devs[3].lastCheckTime = '2026-06-12 09:35';
+          devs[3].lastCheckTime = '2026-06-12T09:35:00.000Z';
           devs[3].status = 'missing';
           return devs;
         })()
@@ -93,6 +133,7 @@ export const mockRoutes: InspectionRoute[] = [
         totalDevices: 5,
         checkedDevices: 0,
         order: 3,
+        assignment: createAssignment('P003', 'U006', '陈工', '2026-06-12T09:00:00.000Z'),
         devices: createDevices('P003', 'AB1', 5)
       },
       {
@@ -104,6 +145,7 @@ export const mockRoutes: InspectionRoute[] = [
         totalDevices: 4,
         checkedDevices: 0,
         order: 4,
+        assignment: createAssignment('P004', 'U001', '张工', '2026-06-12T09:15:00.000Z'),
         devices: createDevices('P004', 'A5', 4)
       }
     ]
@@ -112,6 +154,9 @@ export const mockRoutes: InspectionRoute[] = [
     id: 'ROUTE-002',
     name: 'B栋周巡检路线',
     date: getTodayStr(),
+    shift,
+    teamId: 'T001',
+    teamName: '巡检一组',
     inspectorId: 'U001',
     inspectorName: '张工',
     totalPoints: 3,
@@ -155,6 +200,9 @@ export const mockRoutes: InspectionRoute[] = [
   }
 ];
 
+const synced: SyncStatus = 'synced';
+const pending: SyncStatus = 'pending';
+
 export const mockScanRecords: ScanRecord[] = [
   {
     id: 'SCAN-001',
@@ -164,11 +212,13 @@ export const mockScanRecords: ScanRecord[] = [
     pointId: 'P001',
     pointName: 'A栋主机房',
     status: 'normal',
-    scanTime: '2026-06-12 08:45',
+    scanTime: '2026-06-12T08:45:00.000Z',
+    shift: '早班',
     inspectorId: 'U001',
     inspectorName: '张工',
     isOffline: false,
-    synced: true,
+    syncStatus: synced,
+    syncedAt: '2026-06-12T08:45:00.000Z',
     photos: []
   },
   {
@@ -180,11 +230,14 @@ export const mockScanRecords: ScanRecord[] = [
     pointName: 'A栋主机房',
     status: 'abnormal',
     remark: '运行声音异常，温度偏高',
-    scanTime: '2026-06-12 08:52',
+    scanTime: '2026-06-12T08:52:00.000Z',
+    shift: '早班',
     inspectorId: 'U001',
     inspectorName: '张工',
     isOffline: false,
-    synced: true,
+    syncStatus: synced,
+    syncedAt: '2026-06-12T08:52:00.000Z',
+    faultReportId: 'FAULT-001',
     photos: ['https://picsum.photos/id/1/300/300']
   },
   {
@@ -195,11 +248,13 @@ export const mockScanRecords: ScanRecord[] = [
     pointId: 'P002',
     pointName: 'A栋会议室集群',
     status: 'normal',
-    scanTime: '2026-06-12 09:20',
-    inspectorId: 'U001',
-    inspectorName: '张工',
+    scanTime: '2026-06-12T09:20:00.000Z',
+    shift: '早班',
+    inspectorId: 'U005',
+    inspectorName: '刘工',
     isOffline: false,
-    synced: true,
+    syncStatus: synced,
+    syncedAt: '2026-06-12T09:20:00.000Z',
     photos: []
   },
   {
@@ -211,13 +266,63 @@ export const mockScanRecords: ScanRecord[] = [
     pointName: 'A栋会议室集群',
     status: 'missing',
     remark: '设备未找到',
-    scanTime: '2026-06-12 09:35',
+    scanTime: '2026-06-12T09:35:00.000Z',
+    shift: '早班',
+    inspectorId: 'U005',
+    inspectorName: '刘工',
+    isOffline: true,
+    syncStatus: pending,
+    photos: []
+  },
+  {
+    id: 'SCAN-005',
+    deviceId: 'DEV-A1-5',
+    assetCode: 'AST-A1-0005',
+    deviceName: '监控摄像头1号',
+    pointId: 'P001',
+    pointName: 'A栋主机房',
+    status: 'normal',
+    scanTime: '2026-06-12T08:58:00.000Z',
+    shift: '早班',
     inspectorId: 'U001',
     inspectorName: '张工',
-    isOffline: true,
-    synced: false,
+    isOffline: false,
+    syncStatus: synced,
+    syncedAt: '2026-06-12T08:58:00.000Z',
     photos: []
   }
+];
+
+const mockTimeline1: FaultTimelineItem[] = [
+  createTimelineItem('create', 'U001', '张工', '空调运行异响，出风口温度偏高，机房温度有上升趋势'),
+  createTimelineItem('assign', 'U001', '张工', '指派给李师傅'),
+  createTimelineItem('accept', 'U002', '李师傅', '已接单，开始处理'),
+  createTimelineItem('progress', 'U002', '李师傅', '已联系厂家，配件预计下午到货', 60)
+];
+
+const mockTimeline2: FaultTimelineItem[] = [
+  createTimelineItem('create', 'U001', '张工', '会议室301门禁设备缺失，原安装位置空'),
+  createTimelineItem('assign', 'U001', '张工', '指派给王主管')
+];
+
+const mockTimeline3: FaultTimelineItem[] = [
+  createTimelineItem('create', 'U001', '张工', '监控画面模糊，需清洁镜头或更换'),
+  createTimelineItem('assign', 'U001', '张工', '指派给李师傅'),
+  createTimelineItem('accept', 'U002', '李师傅', '已接单'),
+  createTimelineItem('progress', 'U002', '李师傅', '准备工具出发', 50),
+  createTimelineItem('complete', 'U002', '李师傅', '已清洁镜头，画面恢复清晰'),
+  createTimelineItem('recheck_request', 'U002', '李师傅', '申请复检'),
+  createTimelineItem('recheck_pass', 'U001', '张工', '复检通过，画面清晰'),
+  createTimelineItem('close', 'U001', '张工', '工单已关闭')
+];
+
+const mockTimeline4: FaultTimelineItem[] = [
+  createTimelineItem('create', 'U001', '张工', '交换机端口3指示灯异常闪烁'),
+  createTimelineItem('assign', 'U001', '张工', '指派给李师傅'),
+  createTimelineItem('accept', 'U002', '李师傅', '已接单'),
+  createTimelineItem('progress', 'U002', '李师傅', '检查中', 50),
+  createTimelineItem('complete', 'U002', '李师傅', '已更换网线，端口恢复正常'),
+  createTimelineItem('recheck_request', 'U002', '李师傅', '申请复检')
 ];
 
 export const mockFaultReports: FaultReport[] = [
@@ -233,13 +338,17 @@ export const mockFaultReports: FaultReport[] = [
     photos: ['https://picsum.photos/id/8/400/300'],
     reporterId: 'U001',
     reporterName: '张工',
-    reportTime: '2026-06-12 08:55',
+    reportTime: '2026-06-12T08:55:00.000Z',
+    shift: '早班',
     assigneeId: 'U002',
     assigneeName: '李师傅',
+    assignTime: '2026-06-12T09:00:00.000Z',
+    acceptedAt: '2026-06-12T09:05:00.000Z',
     rectifyStatus: 'processing',
     rectifyProgress: 60,
     rectifyRemark: '已联系厂家，配件预计下午到货',
-    recheckRequired: true
+    recheckRequired: true,
+    timeline: mockTimeline1
   },
   {
     id: 'FAULT-002',
@@ -253,12 +362,15 @@ export const mockFaultReports: FaultReport[] = [
     photos: ['https://picsum.photos/id/3/400/300'],
     reporterId: 'U001',
     reporterName: '张工',
-    reportTime: '2026-06-12 09:40',
+    reportTime: '2026-06-12T09:40:00.000Z',
+    shift: '早班',
     assigneeId: 'U003',
     assigneeName: '王主管',
-    rectifyStatus: 'pending',
+    assignTime: '2026-06-12T09:45:00.000Z',
+    rectifyStatus: 'assigned',
     rectifyProgress: 0,
-    recheckRequired: true
+    recheckRequired: true,
+    timeline: mockTimeline2
   },
   {
     id: 'FAULT-003',
@@ -272,16 +384,21 @@ export const mockFaultReports: FaultReport[] = [
     photos: [],
     reporterId: 'U001',
     reporterName: '张工',
-    reportTime: '2026-06-11 16:20',
+    reportTime: '2026-06-11T16:20:00.000Z',
+    shift: '中班',
     assigneeId: 'U002',
     assigneeName: '李师傅',
-    rectifyStatus: 'completed',
+    assignTime: '2026-06-11T16:25:00.000Z',
+    acceptedAt: '2026-06-11T16:30:00.000Z',
+    rectifyStatus: 'closed',
     rectifyProgress: 100,
     rectifyRemark: '已清洁镜头，画面恢复清晰',
-    rectifyTime: '2026-06-11 18:00',
+    rectifyTime: '2026-06-11T18:00:00.000Z',
     recheckRequired: true,
-    recheckTime: '2026-06-12 08:30',
-    recheckResult: 'pass'
+    recheckTime: '2026-06-12T08:30:00.000Z',
+    recheckResult: 'pass',
+    closedAt: '2026-06-12T08:30:00.000Z',
+    timeline: mockTimeline3
   },
   {
     id: 'FAULT-004',
@@ -295,92 +412,47 @@ export const mockFaultReports: FaultReport[] = [
     photos: ['https://picsum.photos/id/6/400/300'],
     reporterId: 'U001',
     reporterName: '张工',
-    reportTime: '2026-06-12 09:05',
+    reportTime: '2026-06-12T09:05:00.000Z',
+    shift: '早班',
     assigneeId: 'U002',
     assigneeName: '李师傅',
+    assignTime: '2026-06-12T09:10:00.000Z',
+    acceptedAt: '2026-06-12T09:15:00.000Z',
     rectifyStatus: 'recheck',
     rectifyProgress: 100,
     rectifyRemark: '已更换网线，端口恢复正常',
-    rectifyTime: '2026-06-12 10:30',
-    recheckRequired: true
-  }
-];
-
-export const mockDailyStats: DailyStats[] = [
-  {
-    date: getTodayStr(),
-    totalPoints: 7,
-    checkedPoints: 2,
-    totalDevices: 44,
-    checkedDevices: 12,
-    normalCount: 9,
-    abnormalCount: 2,
-    missingCount: 1,
-    disabledCount: 0,
-    faultCount: 4,
-    completedFaultCount: 1,
-    timeoutCount: 0,
-    completionRate: 27
+    rectifyTime: '2026-06-12T10:30:00.000Z',
+    recheckRequired: true,
+    timeline: mockTimeline4
   },
   {
-    date: '2026-06-11',
-    totalPoints: 5,
-    checkedPoints: 5,
-    totalDevices: 32,
-    checkedDevices: 32,
-    normalCount: 28,
-    abnormalCount: 3,
-    missingCount: 0,
-    disabledCount: 1,
-    faultCount: 3,
-    completedFaultCount: 3,
-    timeoutCount: 0,
-    completionRate: 100
-  },
-  {
-    date: '2026-06-10',
-    totalPoints: 6,
-    checkedPoints: 5,
-    totalDevices: 38,
-    checkedDevices: 34,
-    normalCount: 30,
-    abnormalCount: 2,
-    missingCount: 1,
-    disabledCount: 1,
-    faultCount: 3,
-    completedFaultCount: 2,
-    timeoutCount: 1,
-    completionRate: 89
-  },
-  {
-    date: '2026-06-09',
-    totalPoints: 5,
-    checkedPoints: 5,
-    totalDevices: 30,
-    checkedDevices: 30,
-    normalCount: 27,
-    abnormalCount: 2,
-    missingCount: 0,
-    disabledCount: 1,
-    faultCount: 2,
-    completedFaultCount: 2,
-    timeoutCount: 0,
-    completionRate: 100
-  },
-  {
-    date: '2026-06-08',
-    totalPoints: 6,
-    checkedPoints: 6,
-    totalDevices: 36,
-    checkedDevices: 36,
-    normalCount: 33,
-    abnormalCount: 2,
-    missingCount: 0,
-    disabledCount: 1,
-    faultCount: 2,
-    completedFaultCount: 2,
-    timeoutCount: 0,
-    completionRate: 100
+    id: 'FAULT-005',
+    deviceId: 'DEV-A1-6',
+    assetCode: 'AST-A1-0006',
+    deviceName: 'UPS1号',
+    pointId: 'P001',
+    pointName: 'A栋主机房',
+    description: 'UPS电池组电压偏低，需要检查',
+    urgency: 'medium',
+    photos: [],
+    reporterId: 'U005',
+    reporterName: '刘工',
+    reportTime: '2026-06-11T14:30:00.000Z',
+    shift: '早班',
+    assigneeId: 'U003',
+    assigneeName: '王主管',
+    assignTime: '2026-06-11T14:35:00.000Z',
+    acceptedAt: '2026-06-11T14:40:00.000Z',
+    rectifyStatus: 'processing',
+    rectifyProgress: 50,
+    rectifyRemark: '已联系电池供应商',
+    recheckRequired: false,
+    timeline: [
+      createTimelineItem('create', 'U005', '刘工', 'UPS电池组电压偏低'),
+      createTimelineItem('assign', 'U001', '张工', '指派给王主管'),
+      createTimelineItem('accept', 'U003', '王主管', '已接单'),
+      createTimelineItem('progress', 'U003', '王主管', '已联系电池供应商', 50)
+    ]
   }
 ];
 

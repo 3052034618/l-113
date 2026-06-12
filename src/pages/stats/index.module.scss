@@ -150,6 +150,41 @@
   margin-bottom: $spacing-md;
 }
 
+.shiftTabs {
+  display: flex;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+  overflow-x: auto;
+}
+
+.shiftTab {
+  padding: $spacing-sm $spacing-lg;
+  border-radius: $radius-button;
+  background-color: $color-bg-card;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  white-space: nowrap;
+  border: 2rpx solid transparent;
+  transition: all $transition-fast;
+  font-weight: $font-weight-medium;
+}
+
+.shiftTabActive {
+  font-weight: $font-weight-semibold;
+}
+
+.statsSummary {
+  margin-bottom: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  background-color: $color-bg-page;
+  border-radius: $radius-sm;
+}
+
+.statsSummaryText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
 .dateTabs {
   display: flex;
   gap: $spacing-xs;
