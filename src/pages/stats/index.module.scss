@@ -1,0 +1,258 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background-color: $color-bg-page;
+  padding-bottom: 120rpx;
+}
+
+.header {
+  background: $color-bg-header;
+  padding: $spacing-xl $page-padding;
+  padding-bottom: 64rpx;
+}
+
+.userRow {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-xl;
+}
+
+.avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: $radius-round;
+  background-color: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: $spacing-md;
+}
+
+.avatarText {
+  font-size: 48rpx;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+}
+
+.userInfo {
+  flex: 1;
+}
+
+.userName {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+  margin-bottom: 4rpx;
+}
+
+.userDept {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.statsRow {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.section {
+  padding: $spacing-lg $page-padding;
+  margin-top: -32rpx;
+}
+
+.summaryCard {
+  background-color: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.summaryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-lg;
+}
+
+.summaryTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.summaryAction {
+  font-size: $font-size-sm;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.gridItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $spacing-md;
+  background-color: $color-bg-page;
+  border-radius: $radius-md;
+}
+
+.gridValue {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+}
+
+.gridValueSuccess { color: $color-success; }
+.gridValueWarning { color: $color-warning; }
+.gridValueError { color: $color-error; }
+.gridValueInfo { color: $color-info; }
+
+.gridLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+}
+
+.rateSection {
+  margin-bottom: $spacing-lg;
+}
+
+.rateHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+}
+
+.rateLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.rateValue {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.dateTabs {
+  display: flex;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+  overflow-x: auto;
+}
+
+.dateTab {
+  padding: $spacing-sm $spacing-md;
+  border-radius: $radius-button;
+  background-color: $color-bg-card;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  white-space: nowrap;
+  transition: all $transition-fast;
+}
+
+.dateTabActive {
+  background-color: $color-primary;
+  color: $color-text-white;
+}
+
+.timeoutCard {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-bottom: $spacing-sm;
+  box-shadow: $shadow-card;
+  border-left: 6rpx solid $color-error;
+}
+
+.timeoutTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: 4rpx;
+}
+
+.timeoutMeta {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-bottom: $spacing-xs;
+}
+
+.timeoutDesc {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.historyItem {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md $spacing-lg;
+  margin-bottom: $spacing-sm;
+  box-shadow: $shadow-card;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.historyDate {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: 4rpx;
+}
+
+.historyMeta {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.historyRate {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.historyRateValue {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+}
+
+.historyRateLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60rpx $page-padding;
+}
+
+.emptyIcon {
+  font-size: 80rpx;
+  color: $color-text-disabled;
+  margin-bottom: $spacing-sm;
+}
+
+.emptyText {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+}

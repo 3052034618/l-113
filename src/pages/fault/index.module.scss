@@ -1,0 +1,322 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background-color: $color-bg-page;
+  padding-bottom: 160rpx;
+}
+
+.header {
+  background: $color-bg-header;
+  padding: $spacing-xl $page-padding;
+}
+
+.headerTitle {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+  margin-bottom: $spacing-xs;
+}
+
+.headerSubtitle {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.statsRow {
+  display: flex;
+  gap: $spacing-sm;
+  margin-top: $spacing-lg;
+}
+
+.section {
+  padding: $spacing-lg $page-padding;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.filterTabs {
+  display: flex;
+  gap: $spacing-xs;
+}
+
+.filterTab {
+  padding: 6rpx 20rpx;
+  border-radius: $radius-button;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  background-color: $color-bg-card;
+  transition: all $transition-fast;
+}
+
+.filterTabActive {
+  background-color: $color-primary;
+  color: $color-text-white;
+}
+
+.fab {
+  position: fixed;
+  right: $page-padding;
+  bottom: 140rpx;
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8rpx 24rpx rgba(22, 93, 255, 0.4);
+  z-index: 100;
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.fabIcon {
+  font-size: 56rpx;
+  color: $color-text-white;
+  line-height: 1;
+}
+
+.modalMask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  z-index: 1000;
+}
+
+.modalContent {
+  width: 100%;
+  background-color: $color-bg-card;
+  border-radius: $radius-xl $radius-xl 0 0;
+  padding: $spacing-xl $page-padding;
+  padding-bottom: calc(#{$spacing-xl} + env(safe-area-inset-bottom));
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-lg;
+}
+
+.modalTitle {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.modalClose {
+  width: 56rpx;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40rpx;
+  color: $color-text-tertiary;
+}
+
+.formGroup {
+  margin-bottom: $spacing-lg;
+}
+
+.formLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+  font-weight: $font-weight-medium;
+}
+
+.formInput {
+  width: 100%;
+  min-height: 80rpx;
+  padding: $spacing-md;
+  background-color: $color-bg-page;
+  border-radius: $radius-md;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  box-sizing: border-box;
+}
+
+.formTextarea {
+  width: 100%;
+  min-height: 200rpx;
+  padding: $spacing-md;
+  background-color: $color-bg-page;
+  border-radius: $radius-md;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  box-sizing: border-box;
+}
+
+.urgencyRow {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.urgencyBtn {
+  flex: 1;
+  height: $button-height-md;
+  border-radius: $radius-md;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  border: 2rpx solid $color-border;
+  background-color: $color-bg-card;
+  transition: all $transition-fast;
+}
+
+.urgencyBtnActiveHigh {
+  background-color: $color-error-bg;
+  border-color: $color-urgency-high;
+  color: $color-urgency-high;
+}
+
+.urgencyBtnActiveMedium {
+  background-color: $color-warning-bg;
+  border-color: $color-urgency-medium;
+  color: $color-urgency-medium;
+}
+
+.urgencyBtnActiveLow {
+  background-color: $color-primary-bg;
+  border-color: $color-urgency-low;
+  color: $color-urgency-low;
+}
+
+.photoGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+}
+
+.photoItem {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: $radius-md;
+  overflow: hidden;
+  position: relative;
+}
+
+.photoImage {
+  width: 100%;
+  height: 100%;
+}
+
+.photoRemove {
+  position: absolute;
+  top: 4rpx;
+  right: 4rpx;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: $radius-round;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $color-text-white;
+  font-size: 28rpx;
+}
+
+.photoAdd {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: $radius-md;
+  background-color: $color-bg-page;
+  border: 2rpx dashed $color-border;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.photoAddIcon {
+  font-size: 48rpx;
+  color: $color-text-tertiary;
+  margin-bottom: 4rpx;
+}
+
+.photoAddText {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.assigneeRow {
+  display: flex;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.assigneeBtn {
+  padding: $spacing-sm $spacing-lg;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  border: 2rpx solid $color-border;
+  background-color: $color-bg-card;
+  color: $color-text-secondary;
+  transition: all $transition-fast;
+}
+
+.assigneeBtnActive {
+  background-color: $color-primary-bg;
+  border-color: $color-primary;
+  color: $color-primary;
+}
+
+.submitBtn {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  color: $color-text-white;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  margin-top: $spacing-xl;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80rpx $page-padding;
+}
+
+.emptyIcon {
+  font-size: 100rpx;
+  color: $color-text-disabled;
+  margin-bottom: $spacing-md;
+}
+
+.emptyText {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+}

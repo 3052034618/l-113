@@ -1,0 +1,104 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+  transition: all $transition-base;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.99);
+  }
+}
+
+.header {
+  margin-bottom: $spacing-sm;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4rpx;
+}
+
+.deviceName {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  @include text-ellipsis;
+  flex: 1;
+  margin-right: $spacing-sm;
+}
+
+.assetCode {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.description {
+  margin-bottom: $spacing-md;
+}
+
+.descText {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+  @include text-ellipsis-multi(2);
+}
+
+.photos {
+  display: flex;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.photo {
+  width: 160rpx;
+  height: 120rpx;
+  border-radius: $radius-sm;
+  background-color: $color-bg-hover;
+}
+
+.metaRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+  padding-bottom: $spacing-md;
+  border-bottom: 1rpx solid $color-divider;
+}
+
+.location {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.time {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.footerLeft {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.assignee {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.progressWrap {
+  width: 100%;
+}

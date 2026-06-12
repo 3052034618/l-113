@@ -1,0 +1,210 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background-color: $color-bg-page;
+  padding-bottom: 120rpx;
+}
+
+.scanArea {
+  background: $color-bg-header;
+  padding: $spacing-xl $page-padding;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.scanBtn {
+  width: 320rpx;
+  height: 320rpx;
+  border-radius: $radius-round;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: $spacing-lg;
+  border: 4rpx dashed rgba(255, 255, 255, 0.5);
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.97);
+    background: rgba(255, 255, 255, 0.25);
+  }
+}
+
+.scanIcon {
+  font-size: 80rpx;
+  color: $color-text-white;
+  margin-bottom: $spacing-sm;
+}
+
+.scanBtnText {
+  font-size: $font-size-lg;
+  color: $color-text-white;
+  font-weight: $font-weight-semibold;
+}
+
+.scanHint {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.offlineBar {
+  margin: $spacing-md $page-padding 0;
+  padding: $spacing-md;
+  background-color: $color-warning-bg;
+  border-radius: $radius-md;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.offlineInfo {
+  flex: 1;
+}
+
+.offlineText {
+  font-size: $font-size-sm;
+  color: $color-warning;
+  font-weight: $font-weight-medium;
+}
+
+.offlineCount {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  margin-top: 4rpx;
+}
+
+.syncBtn {
+  @include button-reset;
+  padding: 0 $spacing-lg;
+  height: $button-height-sm;
+  border-radius: $radius-button;
+  background-color: $color-warning;
+  color: $color-text-white;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+
+  &:active {
+    opacity: 0.85;
+  }
+}
+
+.section {
+  padding: $spacing-lg $page-padding;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.filterTabs {
+  display: flex;
+  gap: $spacing-xs;
+}
+
+.filterTab {
+  padding: 6rpx 20rpx;
+  border-radius: $radius-button;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  background-color: $color-bg-card;
+  transition: all $transition-fast;
+}
+
+.filterTabActive {
+  background-color: $color-primary;
+  color: $color-text-white;
+}
+
+.recordItem {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-bottom: $spacing-sm;
+  box-shadow: $shadow-card;
+}
+
+.recordHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.recordDevice {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  @include text-ellipsis;
+  flex: 1;
+  margin-right: $spacing-sm;
+}
+
+.recordOffline {
+  padding: 4rpx 12rpx;
+  border-radius: $radius-xs;
+  background-color: $color-warning-bg;
+  font-size: $font-size-xs;
+  color: $color-warning;
+  margin-right: $spacing-xs;
+}
+
+.recordBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.recordMeta {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.recordRemark {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-top: $spacing-xs;
+  @include text-ellipsis-multi(2);
+}
+
+.recordPhotos {
+  display: flex;
+  gap: $spacing-xs;
+  margin-top: $spacing-sm;
+}
+
+.recordPhoto {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: $radius-sm;
+  background-color: $color-bg-hover;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80rpx $page-padding;
+}
+
+.emptyIcon {
+  font-size: 100rpx;
+  color: $color-text-disabled;
+  margin-bottom: $spacing-md;
+}
+
+.emptyText {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+}

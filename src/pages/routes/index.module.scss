@@ -1,0 +1,173 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background-color: $color-bg-page;
+  padding-bottom: 120rpx;
+}
+
+.header {
+  background: $color-bg-header;
+  padding: $spacing-xl $page-padding;
+  padding-bottom: 48rpx;
+}
+
+.userRow {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-lg;
+}
+
+.avatar {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: $radius-round;
+  background-color: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: $spacing-md;
+}
+
+.avatarText {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+}
+
+.userInfo {
+  flex: 1;
+}
+
+.userName {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-semibold;
+  color: $color-text-white;
+}
+
+.userDept {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 4rpx;
+}
+
+.statsRow {
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.section {
+  padding: $spacing-lg $page-padding;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.routeCard {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.routeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.routeName {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.routeStatus {
+  padding: 6rpx 16rpx;
+  border-radius: $radius-xs;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.statusPending {
+  background-color: $color-info-bg;
+  color: $color-info;
+}
+
+.statusProgress {
+  background-color: $color-primary-bg;
+  color: $color-primary;
+}
+
+.statusCompleted {
+  background-color: $color-success-bg;
+  color: $color-success;
+}
+
+.routeMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.metaItem {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.routeProgress {
+  margin-bottom: $spacing-md;
+}
+
+.actionBtn {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-md;
+  border-radius: $radius-button;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  color: $color-text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  transition: all $transition-base;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.actionBtnSecondary {
+  @include button-reset;
+  width: 100%;
+  height: $button-height-md;
+  border-radius: $radius-button;
+  background-color: $color-primary-bg;
+  color: $color-primary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  transition: all $transition-base;
+
+  &:active {
+    opacity: 0.8;
+  }
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80rpx $page-padding;
+}
+
+.emptyText {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+  margin-top: $spacing-md;
+}

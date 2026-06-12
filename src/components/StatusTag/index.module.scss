@@ -1,0 +1,70 @@
+@use '@/styles/variables.scss' as *;
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4rpx 16rpx;
+  border-radius: $radius-xs;
+  white-space: nowrap;
+}
+
+.text {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.statusNormal {
+  background-color: $color-success-bg;
+  .text { color: $color-status-normal; }
+}
+
+.statusAbnormal {
+  background-color: $color-warning-bg;
+  .text { color: $color-status-abnormal; }
+}
+
+.statusMissing {
+  background-color: $color-error-bg;
+  .text { color: $color-status-missing; }
+}
+
+.statusDisabled {
+  background-color: $color-info-bg;
+  .text { color: $color-status-disabled; }
+}
+
+.urgencyHigh {
+  background-color: $color-error-bg;
+  .text { color: $color-urgency-high; }
+}
+
+.urgencyMedium {
+  background-color: $color-warning-bg;
+  .text { color: $color-urgency-medium; }
+}
+
+.urgencyLow {
+  background-color: $color-primary-bg;
+  .text { color: $color-urgency-low; }
+}
+
+.rectifyPending {
+  background-color: $color-warning-bg;
+  .text { color: $color-warning; }
+}
+
+.rectifyProcessing {
+  background-color: $color-primary-bg;
+  .text { color: $color-primary; }
+}
+
+.rectifyCompleted {
+  background-color: $color-success-bg;
+  .text { color: $color-success; }
+}
+
+.rectifyRecheck {
+  background-color: rgba(255, 125, 0, 0.1);
+  .text { color: $color-warning; }
+}

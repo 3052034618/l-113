@@ -1,0 +1,250 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background-color: $color-bg-page;
+  padding-bottom: 120rpx;
+}
+
+.header {
+  background: $color-bg-header;
+  padding: $spacing-xl $page-padding;
+}
+
+.deviceName {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+  margin-bottom: $spacing-xs;
+}
+
+.deviceMeta {
+  font-size: $font-size-sm;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.tagsRow {
+  display: flex;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+}
+
+.section {
+  padding: $spacing-lg $page-padding;
+  margin-top: -32rpx;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.infoCard {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.infoRow {
+  display: flex;
+  padding: $spacing-sm 0;
+  border-bottom: 1rpx solid $color-divider;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.infoLabel {
+  width: 160rpx;
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  flex-shrink: 0;
+}
+
+.infoValue {
+  flex: 1;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+}
+
+.descText {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+}
+
+.photoGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+}
+
+.photoItem {
+  width: 210rpx;
+  height: 210rpx;
+  border-radius: $radius-md;
+  overflow: hidden;
+}
+
+.photoImage {
+  width: 100%;
+  height: 100%;
+}
+
+.progressSection {
+  margin-top: $spacing-md;
+}
+
+.progressHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+}
+
+.progressLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.progressValue {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+}
+
+.timelineItem {
+  display: flex;
+  padding-bottom: $spacing-lg;
+  position: relative;
+
+  &:last-child {
+    padding-bottom: 0;
+  }
+}
+
+.timelineDot {
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: $radius-round;
+  background-color: $color-primary;
+  margin-right: $spacing-md;
+  margin-top: 6rpx;
+  flex-shrink: 0;
+}
+
+.timelineContent {
+  flex: 1;
+}
+
+.timelineTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: 4rpx;
+}
+
+.timelineDesc {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+  margin-bottom: 4rpx;
+}
+
+.timelineTime {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.assigneeCard {
+  display: flex;
+  align-items: center;
+  padding: $spacing-md;
+  background-color: $color-primary-bg;
+  border-radius: $radius-md;
+  margin-top: $spacing-md;
+}
+
+.assigneeAvatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, $color-primary-light 0%, $color-primary 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: $spacing-md;
+}
+
+.assigneeAvatarText {
+  font-size: $font-size-lg;
+  color: $color-text-white;
+  font-weight: $font-weight-semibold;
+}
+
+.assigneeInfo {
+  flex: 1;
+}
+
+.assigneeName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+}
+
+.assigneeDept {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  margin-top: 4rpx;
+}
+
+.bottomBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: $spacing-md $page-padding;
+  padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+  background-color: $color-bg-card;
+  box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.06);
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.primaryBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  color: $color-text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+
+  &:active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+}
+
+.secondaryBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  background-color: $color-primary-bg;
+  color: $color-primary;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+
+  &:active {
+    opacity: 0.8;
+  }
+}

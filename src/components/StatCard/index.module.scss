@@ -1,0 +1,44 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $spacing-lg $spacing-sm;
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  box-shadow: $shadow-card;
+}
+
+.cardHighlight {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: $spacing-lg $spacing-sm;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  border-radius: $radius-md;
+  box-shadow: $shadow-card;
+
+  .value, .unit { color: $color-text-white !important; }
+  .label { color: rgba(255, 255, 255, 0.85); }
+}
+
+.value {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  line-height: 1.2;
+}
+
+.unit {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-normal;
+  margin-left: 4rpx;
+}
+
+.label {
+  margin-top: $spacing-xs;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}

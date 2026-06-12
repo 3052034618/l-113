@@ -1,0 +1,104 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.99);
+    opacity: 0.9;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-sm;
+}
+
+.orderBadge {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: $radius-md;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: $spacing-md;
+}
+
+.orderText {
+  color: $color-text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-bold;
+}
+
+.info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.name {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  @include text-ellipsis;
+}
+
+.location {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+}
+
+.statusBadge {
+  padding: 6rpx 16rpx;
+  border-radius: $radius-xs;
+  background-color: $color-warning-bg;
+}
+
+.statusText {
+  font-size: $font-size-xs;
+  color: $color-warning;
+  font-weight: $font-weight-medium;
+}
+
+.completed {
+  background-color: $color-success-bg;
+  .statusText { color: $color-success; }
+}
+
+.typeTag {
+  display: inline-flex;
+  padding: 4rpx 12rpx;
+  border-radius: $radius-xs;
+  background-color: $color-primary-bg;
+  margin-bottom: $spacing-md;
+}
+
+.typeText {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.progressSection {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+}
+
+.progressLabel {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.progressText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
